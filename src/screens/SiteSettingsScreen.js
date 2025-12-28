@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  StyleSheet,
   ScrollView,
   StatusBar,
   TouchableOpacity,
@@ -14,7 +13,6 @@ import {
   Switch,
   Button,
   Divider,
-  SegmentedButtons,
 } from 'react-native-paper';
 import {
   ArrowLeft,
@@ -25,23 +23,23 @@ import {
   Smartphone,
   Bell,
   Volume2,
-  Mail,
-  Gauge,
   Save,
   RotateCcw,
+  Camera,
+  ShieldCheck,
+  Users,
+  ChevronRight,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { styles, COLORS } from './styles/SiteSettingsScreenStyles';
+import { USER_ROLES, isAdmin } from '../utils/userRoles';
 
-const COLORS = {
-  primary: '#0f172a',
-  secondary: '#64748b',
-  background: '#f8fafc',
-  surface: '#ffffff',
-  success: '#10b981',
-  error: '#ef4444',
-  warning: '#f59e0b',
-};
+const SiteSettingsScreen = ({ navigation, userRole, onRevokeCameraPermission }) => {
+  // Check if current user is an admin
+  const userIsAdmin = isAdmin(userRole);
+  // Camera Permission State
+  const [cameraPermission, setCameraPermission] = useState(true);
 
-const SiteSettingsScreen = ({ navigation }) => {
   // AI Models State
   const [helmetDetection, setHelmetDetection] = useState(true);
   const [vestDetection, setVestDetection] = useState(true);
@@ -49,12 +47,50 @@ const SiteSettingsScreen = ({ navigation }) => {
 
   // Alert Preferences State
   const [audibleSiren, setAudibleSiren] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-
-  // Sensitivity State
-  const [sensitivity, setSensitivity] = useState('medium');
 
   const [saving, setSaving] = useState(false);
+
+  // Check actual camera permission status on mount
+  useEffect(() => {
+    const checkCameraStatus = async () => {
+      try {
+        const { status } = await ImagePicker.getCameraPermissionsAsync();
+        setCameraPermission(status === 'granted');
+      } catch (error) {
+        console.error('Error checking camera permission:', error);
+      }
+    };
+
+    checkCameraStatus();
+  }, []);
+
+  // Handle camera permission toggle
+  const handleCameraPermissionToggle = (value) => {
+    if (!value) {
+      // User wants to disable camera permission
+      Alert.alert(
+        'Disable Camera Access',
+        'Disabling camera access will redirect you to the permission screen. You will need to grant camera permission again to use the app.\n\nAre you sure you want to continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: () => {
+              setCameraPermission(false);
+              // Redirect to camera permission screen
+              if (onRevokeCameraPermission) {
+                onRevokeCameraPermission();
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      // User wants to enable - this shouldn't happen normally since they need permission
+      setCameraPermission(true);
+    }
+  };
 
   const handleBack = () => {
     if (navigation && navigation.goBack) {
@@ -91,8 +127,6 @@ const SiteSettingsScreen = ({ navigation }) => {
             setVestDetection(true);
             setPhoneDetection(false);
             setAudibleSiren(true);
-            setEmailNotifications(true);
-            setSensitivity('medium');
           },
         },
       ]
@@ -146,6 +180,36 @@ const SiteSettingsScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Camera Permission Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Camera size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Camera Permission</Text>
+          </View>
+          <Card style={styles.card} mode="elevated">
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Surface style={[styles.settingIconSurface, cameraPermission && styles.settingIconActive]} elevation={0}>
+                    <Camera size={20} color={cameraPermission ? COLORS.surface : COLORS.primary} />
+                  </Surface>
+                  <View style={styles.settingTextContainer}>
+                    <Text style={styles.settingTitle}>Camera Access</Text>
+                    <Text style={[styles.settingSubtitle, cameraPermission ? styles.statusGranted : styles.statusDenied]}>
+                      {cameraPermission ? 'Permission granted' : 'Permission required'}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={cameraPermission}
+                  onValueChange={handleCameraPermissionToggle}
+                  color={COLORS.success}
+                />
+              </View>
+            </Card.Content>
+          </Card>
+        </View>
+
         {/* AI Models Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -196,85 +260,39 @@ const SiteSettingsScreen = ({ navigation }) => {
                 value={audibleSiren}
                 onValueChange={setAudibleSiren}
               />
-              <Divider style={styles.divider} />
-              <SettingRow
-                icon={Mail}
-                title="Email Notifications"
-                subtitle="Send email alerts to supervisors"
-                value={emailNotifications}
-                onValueChange={setEmailNotifications}
-              />
             </Card.Content>
           </Card>
         </View>
 
-        {/* Sensitivity Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Gauge size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>Detection Sensitivity</Text>
+        {/* Admin Panel Section - Only visible to ADMIN role */}
+        {userIsAdmin && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ShieldCheck size={20} color={COLORS.primary} />
+              <Text style={styles.sectionTitle}>Administration</Text>
+            </View>
+            <Card style={styles.card} mode="elevated">
+              <Card.Content style={styles.cardContent}>
+                <TouchableOpacity
+                  style={styles.adminPanelButton}
+                  onPress={() => navigation.navigate('AdminApproval')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingLeft}>
+                    <Surface style={[styles.settingIconSurface, styles.adminIconSurface]} elevation={0}>
+                      <Users size={20} color={COLORS.surface} />
+                    </Surface>
+                    <View style={styles.settingTextContainer}>
+                      <Text style={styles.settingTitle}>User Approval Panel</Text>
+                      <Text style={styles.settingSubtitle}>Review registration requests</Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={22} color={COLORS.secondary} />
+                </TouchableOpacity>
+              </Card.Content>
+            </Card>
           </View>
-          <Card style={styles.card} mode="elevated">
-            <Card.Content style={styles.sensitivityContent}>
-              <Text style={styles.sensitivityLabel}>
-                Adjust the AI detection sensitivity level
-              </Text>
-              <SegmentedButtons
-                value={sensitivity}
-                onValueChange={setSensitivity}
-                buttons={[
-                  {
-                    value: 'low',
-                    label: 'Low',
-                    style:
-                      sensitivity === 'low'
-                        ? styles.segmentActive
-                        : styles.segment,
-                    labelStyle:
-                      sensitivity === 'low'
-                        ? styles.segmentLabelActive
-                        : styles.segmentLabel,
-                  },
-                  {
-                    value: 'medium',
-                    label: 'Medium',
-                    style:
-                      sensitivity === 'medium'
-                        ? styles.segmentActive
-                        : styles.segment,
-                    labelStyle:
-                      sensitivity === 'medium'
-                        ? styles.segmentLabelActive
-                        : styles.segmentLabel,
-                  },
-                  {
-                    value: 'high',
-                    label: 'High',
-                    style:
-                      sensitivity === 'high'
-                        ? styles.segmentActive
-                        : styles.segment,
-                    labelStyle:
-                      sensitivity === 'high'
-                        ? styles.segmentLabelActive
-                        : styles.segmentLabel,
-                  },
-                ]}
-                style={styles.segmentedButtons}
-              />
-              <View style={styles.sensitivityInfo}>
-                <Text style={styles.sensitivityInfoText}>
-                  {sensitivity === 'low' &&
-                    'Fewer false positives, may miss some violations'}
-                  {sensitivity === 'medium' &&
-                    'Balanced detection accuracy (Recommended)'}
-                  {sensitivity === 'high' &&
-                    'Maximum detection, may have more false positives'}
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
-        </View>
+        )}
 
         {/* Save Button */}
         <View style={styles.saveContainer}>
@@ -307,187 +325,5 @@ const SiteSettingsScreen = ({ navigation }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 2,
-  },
-  resetButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-  },
-  cardContent: {
-    padding: 8,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  settingIconSurface: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: COLORS.primary,
-  },
-  settingSubtitle: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    marginTop: 2,
-  },
-  divider: {
-    marginHorizontal: 8,
-    backgroundColor: COLORS.background,
-  },
-  sensitivityContent: {
-    padding: 16,
-  },
-  sensitivityLabel: {
-    fontSize: 14,
-    color: COLORS.secondary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  segmentedButtons: {
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-  },
-  segment: {
-    backgroundColor: COLORS.background,
-    borderColor: COLORS.background,
-  },
-  segmentActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  segmentLabel: {
-    color: COLORS.secondary,
-  },
-  segmentLabelActive: {
-    color: COLORS.surface,
-  },
-  sensitivityInfo: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-  },
-  sensitivityInfoText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  saveContainer: {
-    marginBottom: 16,
-  },
-  saveButton: {
-    borderRadius: 12,
-  },
-  saveButtonContent: {
-    paddingVertical: 8,
-  },
-  saveButtonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  infoCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  infoCardContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 16,
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.secondary,
-    lineHeight: 18,
-  },
-});
 
 export default SiteSettingsScreen;

@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableOpacity,
   Animated,
-  Dimensions,
+  Alert,
 } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { TextInput, Text } from 'react-native-paper';
 import {
   Shield,
   Eye,
@@ -19,20 +18,11 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react-native';
+import { styles, COLORS, LOGIN_COLORS } from './styles/LoginScreenStyles';
+import { getUserRole, getRoleDisplayName } from '../utils/userRoles';
+import { supabase } from '../auth/supabase';
 
-const { width, height } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#0f172a',
-  secondary: '#64748b',
-  background: '#f8fafc',
-  surface: '#ffffff',
-  success: '#10b981',
-  error: '#ef4444',
-  accent: '#3b82f6',
-};
-
-const LoginScreen = ({ onLoginSuccess, onNavigateToRegister }) => {
+const LoginScreen = ({ onLoginSuccess, onNavigateToRegister, onNavigateToForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -88,11 +78,50 @@ const LoginScreen = ({ onLoginSuccess, onNavigateToRegister }) => {
     if (hasError) return;
 
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
 
-    if (onLoginSuccess) {
-      onLoginSuccess({ email });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password: password,
+      });
+
+      if (error) {
+        // Handle specific Supabase auth errors
+        if (error.message.includes('Invalid login credentials')) {
+          setEmailError('Invalid email or password');
+        } else if (error.message.includes('Email not confirmed')) {
+          Alert.alert(
+            'Email Not Verified',
+            'Please check your email and verify your account before logging in.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Login Error', error.message, [{ text: 'OK' }]);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Login successful
+      const userEmail = data.user?.email || email.toLowerCase().trim();
+      const userRole = getUserRole(userEmail);
+      const roleName = getRoleDisplayName(userRole);
+
+      if (onLoginSuccess) {
+        onLoginSuccess({
+          id: data.user?.id,
+          email: userEmail,
+          role: userRole,
+          roleName: roleName,
+          session: data.session,
+        });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
+        { text: 'OK' },
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -212,7 +241,10 @@ const LoginScreen = ({ onLoginSuccess, onNavigateToRegister }) => {
               </View>
 
               {/* Forgot Password */}
-              <TouchableOpacity style={styles.forgotPassword}>
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={onNavigateToForgotPassword}
+              >
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
 
@@ -265,201 +297,5 @@ const LoginScreen = ({ onLoginSuccess, onNavigateToRegister }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  backgroundTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.35,
-    backgroundColor: COLORS.primary,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    overflow: 'hidden',
-  },
-  circleOne: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-  },
-  circleTwo: {
-    position: 'absolute',
-    top: 100,
-    left: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 80,
-    paddingBottom: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-    marginBottom: 8,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  formCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  inputIcon: {
-    paddingLeft: 16,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    fontSize: 15,
-    height: 52,
-  },
-  eyeIcon: {
-    paddingRight: 16,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 12,
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    fontSize: 13,
-    color: COLORS.accent,
-    fontWeight: '600',
-  },
-  signInButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  signInButtonDisabled: {
-    opacity: 0.7,
-  },
-  signInButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.surface,
-  },
-  signInButtonIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e2e8f0',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: COLORS.secondary,
-    marginHorizontal: 16,
-  },
-  createAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.accent,
-  },
-  createAccountText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 32,
-    gap: 8,
-  },
-  footerText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-  },
-});
 
 export default LoginScreen;

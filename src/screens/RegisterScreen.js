@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableOpacity,
   Animated,
-  Dimensions,
+  Alert,
 } from 'react-native';
-import { TextInput, Text } from 'react-native-paper';
+import { TextInput, Text, Snackbar } from 'react-native-paper';
 import {
   Shield,
   Eye,
@@ -20,34 +19,70 @@ import {
   ArrowRight,
   ArrowLeft,
   UserPlus,
+  ShieldAlert,
+  CheckCircle,
+  Clock,
+  Building,
 } from 'lucide-react-native';
+import { styles, COLORS, REGISTER_COLORS } from './styles/RegisterScreenStyles';
+import { supabase } from '../auth/supabase';
 
-const { width, height } = Dimensions.get('window');
+// Simulated Database - Approved Users (can register directly)
+export const APPROVED_EMAILS = [
+  'admin@site.com',
+];
 
-const COLORS = {
-  primary: '#0f172a',
-  secondary: '#64748b',
-  background: '#f8fafc',
-  surface: '#ffffff',
-  success: '#10b981',
-  error: '#ef4444',
-  accent: '#3b82f6',
+// Simulated Database - Pending Registration Requests
+export let PENDING_REQUESTS = [];
+
+// Simulated Database - Denied Requests
+export let DENIED_REQUESTS = [];
+
+// Helper functions to manage requests (exported for AdminApprovalScreen)
+export const addPendingRequest = (request) => {
+  PENDING_REQUESTS = [...PENDING_REQUESTS, request];
 };
+
+export const removePendingRequest = (email) => {
+  PENDING_REQUESTS = PENDING_REQUESTS.filter(
+    (req) => req.email.toLowerCase() !== email.toLowerCase()
+  );
+};
+
+export const addToApproved = (email) => {
+  if (!APPROVED_EMAILS.includes(email.toLowerCase())) {
+    APPROVED_EMAILS.push(email.toLowerCase());
+  }
+};
+
+export const addToDenied = (request) => {
+  DENIED_REQUESTS = [...DENIED_REQUESTS, { ...request, deniedAt: new Date().toISOString() }];
+};
+
+export const getPendingRequests = () => PENDING_REQUESTS;
+export const getApprovedEmails = () => APPROVED_EMAILS;
 
 const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Snackbar states
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState('error'); // 'error', 'success', or 'pending'
 
   const [errors, setErrors] = useState({
     fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    jobTitle: '',
   });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -79,6 +114,7 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
       email: '',
       password: '',
       confirmPassword: '',
+      jobTitle: '',
     };
     let isValid = true;
 
@@ -95,6 +131,11 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
       isValid = false;
     } else if (!validateEmail(email)) {
       newErrors.email = 'Please enter a valid email';
+      isValid = false;
+    }
+
+    if (!jobTitle.trim()) {
+      newErrors.jobTitle = 'Job title is required';
       isValid = false;
     }
 
@@ -118,15 +159,162 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
     return isValid;
   };
 
+  // Check if email is already approved
+  const isEmailApproved = (emailToCheck) => {
+    const normalizedEmail = emailToCheck.toLowerCase().trim();
+    return APPROVED_EMAILS.some(
+      (approvedEmail) => approvedEmail.toLowerCase() === normalizedEmail
+    );
+  };
+
+  // Check if request is already pending
+  const isRequestPending = (emailToCheck) => {
+    const normalizedEmail = emailToCheck.toLowerCase().trim();
+    return PENDING_REQUESTS.some(
+      (request) => request.email.toLowerCase() === normalizedEmail
+    );
+  };
+
+  // Check if request was denied
+  const isRequestDenied = (emailToCheck) => {
+    const normalizedEmail = emailToCheck.toLowerCase().trim();
+    return DENIED_REQUESTS.some(
+      (request) => request.email.toLowerCase() === normalizedEmail
+    );
+  };
+
+  // Show snackbar notification
+  const showSnackbar = (message, type = 'error') => {
+    setSnackbarMessage(message);
+    setSnackbarType(type);
+    setSnackbarVisible(true);
+  };
+
   const handleRegister = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setLoading(false);
 
-    if (onRegisterSuccess) {
-      onRegisterSuccess({ fullName, email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if request is already pending
+    if (isRequestPending(email)) {
+      setLoading(false);
+      Alert.alert(
+        'Request Already Pending',
+        'Your registration request is already under review. Please wait for admin approval.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      showSnackbar('Your request is already pending approval.', 'pending');
+      return;
+    }
+
+    // Check if request was previously denied
+    if (isRequestDenied(email)) {
+      setLoading(false);
+      Alert.alert(
+        'Request Previously Denied',
+        'Your registration request was previously denied. Please contact your Site Administrator for more information.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      showSnackbar('Your previous request was denied. Contact your administrator.', 'error');
+      return;
+    }
+
+    try {
+      // Register with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            job_title: jobTitle.trim(),
+            is_approved: isEmailApproved(email),
+          },
+        },
+      });
+
+      if (error) {
+        // Handle specific Supabase auth errors
+        if (error.message.includes('User already registered')) {
+          setErrors((prev) => ({ ...prev, email: 'This email is already registered' }));
+          showSnackbar('This email is already registered. Try logging in.', 'error');
+        } else if (error.message.includes('Password')) {
+          setErrors((prev) => ({ ...prev, password: error.message }));
+          showSnackbar(error.message, 'error');
+        } else {
+          Alert.alert('Registration Error', error.message, [{ text: 'OK' }]);
+          showSnackbar(error.message, 'error');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Check if email is already approved (can register directly)
+      if (isEmailApproved(email)) {
+        showSnackbar('Account created successfully! Please check your email to verify.', 'success');
+        Alert.alert(
+          'Account Created',
+          'Your account has been created. Please check your email to verify your account, then you can log in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                if (onRegisterSuccess) {
+                  onRegisterSuccess({
+                    id: data.user?.id,
+                    fullName,
+                    email: normalizedEmail,
+                    jobTitle
+                  });
+                }
+              },
+            },
+          ]
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Submit new registration request for non-approved emails
+      const newRequest = {
+        id: data.user?.id || Date.now().toString(),
+        fullName: fullName.trim(),
+        email: normalizedEmail,
+        jobTitle: jobTitle.trim(),
+        requestedAt: new Date().toISOString(),
+        status: 'pending',
+      };
+
+      addPendingRequest(newRequest);
+
+      // Show success message for request submission
+      Alert.alert(
+        'Request Submitted',
+        'Your account has been created and registration request submitted. Please check your email to verify your account. You will be able to log in once the Site Administrator approves your request.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Clear form
+              setFullName('');
+              setEmail('');
+              setPassword('');
+              setConfirmPassword('');
+              setJobTitle('');
+            },
+          },
+        ]
+      );
+      showSnackbar('Registration request submitted! Check email & await approval.', 'success');
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
+        { text: 'OK' },
+      ]);
+      showSnackbar('An unexpected error occurred.', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -138,6 +326,28 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
 
   const clearError = (field) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const getSnackbarColor = () => {
+    switch (snackbarType) {
+      case 'success':
+        return COLORS.success;
+      case 'pending':
+        return COLORS.warning;
+      default:
+        return COLORS.error;
+    }
+  };
+
+  const getSnackbarIcon = () => {
+    switch (snackbarType) {
+      case 'success':
+        return <CheckCircle size={18} color={COLORS.surface} />;
+      case 'pending':
+        return <Clock size={18} color={COLORS.surface} />;
+      default:
+        return <ShieldAlert size={18} color={COLORS.surface} />;
+    }
   };
 
   return (
@@ -179,9 +389,9 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
               <View style={styles.logoContainer}>
                 <UserPlus size={32} color={COLORS.accent} strokeWidth={2} />
               </View>
-              <Text style={styles.welcomeText}>Create Account</Text>
+              <Text style={styles.welcomeText}>Request Access</Text>
               <Text style={styles.subtitleText}>
-                Join SafeSite AI for workplace safety
+                Submit your registration for admin approval
               </Text>
             </View>
 
@@ -242,6 +452,34 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
                 </View>
                 {errors.email ? (
                   <Text style={styles.errorText}>{errors.email}</Text>
+                ) : null}
+              </View>
+
+              {/* Job Title Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Job Title / Role</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.inputIcon}>
+                    <Building size={20} color={errors.jobTitle ? COLORS.error : COLORS.secondary} />
+                  </View>
+                  <TextInput
+                    value={jobTitle}
+                    onChangeText={(text) => {
+                      setJobTitle(text);
+                      clearError('jobTitle');
+                    }}
+                    mode="flat"
+                    placeholder="e.g., Site Manager, Supervisor"
+                    autoCapitalize="words"
+                    style={styles.input}
+                    underlineColor="transparent"
+                    activeUnderlineColor="transparent"
+                    textColor={COLORS.primary}
+                    placeholderTextColor={COLORS.secondary}
+                  />
+                </View>
+                {errors.jobTitle ? (
+                  <Text style={styles.errorText}>{errors.jobTitle}</Text>
                 ) : null}
               </View>
 
@@ -321,14 +559,15 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
                 ) : null}
               </View>
 
-              {/* Terms Text */}
-              <Text style={styles.termsText}>
-                By creating an account, you agree to our{' '}
-                <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-              </Text>
+              {/* Info Box */}
+              <View style={styles.infoBox}>
+                <Clock size={16} color={COLORS.accent} />
+                <Text style={styles.infoText}>
+                  Your request will be reviewed by the Site Administrator. You'll receive access once approved.
+                </Text>
+              </View>
 
-              {/* Sign Up Button */}
+              {/* Submit Request Button */}
               <TouchableOpacity
                 style={[styles.signUpButton, loading && styles.signUpButtonDisabled]}
                 onPress={handleRegister}
@@ -336,10 +575,10 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
                 activeOpacity={0.8}
               >
                 {loading ? (
-                  <Text style={styles.signUpButtonText}>Creating Account...</Text>
+                  <Text style={styles.signUpButtonText}>Submitting Request...</Text>
                 ) : (
                   <>
-                    <Text style={styles.signUpButtonText}>Create Account</Text>
+                    <Text style={styles.signUpButtonText}>Submit Request</Text>
                     <View style={styles.signUpButtonIcon}>
                       <ArrowRight size={20} color={COLORS.surface} />
                     </View>
@@ -366,200 +605,33 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={4000}
+        style={{
+          backgroundColor: getSnackbarColor(),
+          marginBottom: 20,
+          marginHorizontal: 16,
+          borderRadius: 12,
+        }}
+        action={{
+          label: 'Dismiss',
+          textColor: COLORS.surface,
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {getSnackbarIcon()}
+          <Text style={{ color: COLORS.surface, flex: 1, fontSize: 13 }}>
+            {snackbarMessage}
+          </Text>
+        </View>
+      </Snackbar>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  backgroundTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.30,
-    backgroundColor: COLORS.primary,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    overflow: 'hidden',
-  },
-  circleOne: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-  },
-  circleTwo: {
-    position: 'absolute',
-    top: 80,
-    left: -50,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoContainer: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  welcomeText: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-    marginBottom: 6,
-  },
-  subtitleText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  formCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  inputIcon: {
-    paddingLeft: 16,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    fontSize: 14,
-    height: 50,
-  },
-  eyeIcon: {
-    paddingRight: 16,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 11,
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  termsText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: COLORS.accent,
-    fontWeight: '600',
-  },
-  signUpButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  signUpButtonDisabled: {
-    opacity: 0.7,
-  },
-  signUpButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.surface,
-  },
-  signUpButtonIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signInContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  signInText: {
-    fontSize: 14,
-    color: COLORS.secondary,
-  },
-  signInLink: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-    gap: 8,
-  },
-  footerText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-  },
-});
 
 export default RegisterScreen;

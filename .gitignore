@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 
+auth/
+supabase.js
 # Expo
 .expo/
 dist/

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View,
-  StyleSheet,
   FlatList,
   StatusBar,
   TouchableOpacity,
   RefreshControl,
-  Dimensions,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import {
   Card,
@@ -21,69 +21,89 @@ import {
   MapPin,
   HardHat,
   Shirt,
-  Footprints,
-  AlertOctagon,
+  Smartphone,
   ScanLine,
   Shield,
-  TrendingUp,
   Calendar,
-  Search,
-  ChevronRight,
+  Camera,
 } from 'lucide-react-native';
+import { styles, COLORS } from './styles/HistoryScreenStyles';
 
-const { width } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#0f172a',
-  secondary: '#64748b',
-  background: '#f8fafc',
-  surface: '#ffffff',
-  success: '#10b981',
-  error: '#ef4444',
-  warning: '#f59e0b',
-  info: '#3b82f6',
+// Local violation images from assets folder
+const VIOLATION_IMAGES = {
+  image1: require('../../assets/000001_jpg.rf.13bbbb75beaf9a127850c10c49992ba3.jpg'),
+  image2: require('../../assets/000003_jpg.rf.912b52bd4aaa765d9eb1eac1d40fe50f.jpg'),
+  image3: require('../../assets/000008_jpg.rf.82886e512a520cf51578fbc2e25bf8e2.jpg'),
+  image4: require('../../assets/000010_jpg.rf.746207ed5adb44d301f30a30745a5a91.jpg'),
+  image5: require('../../assets/000019_jpg.rf.aa39388cb2b5aacb3079166d9153a858.jpg'),
 };
 
+// Violation data with local images from assets
 const DUMMY_LOGS = [
   {
     id: 1,
     type: 'No Helmet',
-    zone: 'Zone A',
+    zone: 'Zone A - Construction Site',
     time: '10:42 AM',
     date: 'Today',
-    confidence: 98,
+    severity: 'High',
+    status: 'Pending',
+    workerImage: VIOLATION_IMAGES.image1,
+    isLocalImage: true,
+    highlightArea: { top: 10, left: 30, width: 40, height: 30 },
+    description: 'Worker detected without safety helmet in active construction zone.',
   },
   {
     id: 2,
     type: 'No Vest',
-    zone: 'Zone B',
+    zone: 'Zone B - Loading Area',
     time: '11:00 AM',
     date: 'Today',
-    confidence: 95,
+    severity: 'Medium',
+    status: 'Pending',
+    workerImage: VIOLATION_IMAGES.image2,
+    isLocalImage: true,
+    highlightArea: { top: 20, left: 25, width: 50, height: 45 },
+    description: 'Worker not wearing high-visibility safety vest in loading area.',
   },
   {
     id: 3,
-    type: 'No Safety Boots',
-    zone: 'Zone C',
+    type: 'No Helmet',
+    zone: 'Zone C - Machinery Area',
     time: '09:15 AM',
     date: 'Today',
-    confidence: 87,
+    severity: 'High',
+    status: 'Resolved',
+    workerImage: VIOLATION_IMAGES.image3,
+    isLocalImage: true,
+    highlightArea: { top: 5, left: 30, width: 40, height: 25 },
+    description: 'Worker detected without safety helmet near heavy machinery.',
   },
   {
     id: 4,
     type: 'No Helmet',
-    zone: 'Zone A',
+    zone: 'Zone A - Scaffolding',
     time: '02:30 PM',
     date: 'Yesterday',
-    confidence: 99,
+    severity: 'Critical',
+    status: 'Resolved',
+    workerImage: VIOLATION_IMAGES.image4,
+    isLocalImage: true,
+    highlightArea: { top: 8, left: 30, width: 40, height: 28 },
+    description: 'Worker on scaffolding without proper head protection.',
   },
   {
     id: 5,
-    type: 'Restricted Area',
-    zone: 'Zone D',
+    type: 'No Vest',
+    zone: 'Zone B - Entrance',
     time: '04:45 PM',
     date: 'Yesterday',
-    confidence: 92,
+    severity: 'Low',
+    status: 'Pending',
+    workerImage: VIOLATION_IMAGES.image5,
+    isLocalImage: true,
+    highlightArea: { top: 15, left: 28, width: 45, height: 50 },
+    description: 'Visitor entering site without required safety vest.',
   },
 ];
 
@@ -93,10 +113,8 @@ const getViolationIcon = (type) => {
       return HardHat;
     case 'No Vest':
       return Shirt;
-    case 'No Safety Boots':
-      return Footprints;
-    case 'Restricted Area':
-      return AlertOctagon;
+    case 'Mobile Phone Usage':
+      return Smartphone;
     default:
       return AlertTriangle;
   }
@@ -108,13 +126,71 @@ const getViolationColor = (type) => {
       return '#ef4444';
     case 'No Vest':
       return '#f59e0b';
-    case 'No Safety Boots':
+    case 'Mobile Phone Usage':
       return '#8b5cf6';
-    case 'Restricted Area':
-      return '#ec4899';
     default:
       return '#ef4444';
   }
+};
+
+// Image component with loading state - supports both local and remote images
+const EvidenceImage = ({ imageSource, isLocalImage, highlightArea, violationColor }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Determine the correct source format
+  const source = isLocalImage ? imageSource : { uri: imageSource };
+
+  return (
+    <View style={styles.evidenceContainer}>
+      {!error ? (
+        <>
+          <Image
+            source={source}
+            style={styles.evidenceImage}
+            resizeMode="cover"
+            onLoadEnd={() => setLoading(false)}
+            onError={() => {
+              setError(true);
+              setLoading(false);
+            }}
+          />
+          {loading && (
+            <View style={styles.imageLoadingContainer}>
+              <ActivityIndicator size="small" color="#00d4ff" />
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={styles.imageErrorContainer}>
+          <Camera size={24} color={COLORS.secondary} />
+          <Text style={styles.imageErrorText}>Image unavailable</Text>
+        </View>
+      )}
+      {/* Dark overlay for better visibility */}
+      <View style={styles.imageOverlay} />
+      {/* Violation Highlight Box */}
+      {!loading && !error && (
+        <View
+          style={[
+            styles.highlightBox,
+            {
+              top: `${highlightArea?.top || 10}%`,
+              left: `${highlightArea?.left || 30}%`,
+              width: `${highlightArea?.width || 40}%`,
+              height: `${highlightArea?.height || 30}%`,
+              borderColor: violationColor,
+            },
+          ]}
+        >
+          <View style={[styles.highlightCorner, styles.cornerTopLeft, { borderColor: violationColor }]} />
+          <View style={[styles.highlightCorner, styles.cornerTopRight, { borderColor: violationColor }]} />
+          <View style={[styles.highlightCorner, styles.cornerBottomLeft, { borderColor: violationColor }]} />
+          <View style={[styles.highlightCorner, styles.cornerBottomRight, { borderColor: violationColor }]} />
+        </View>
+      )}
+    </View>
+  );
 };
 
 const HistoryScreen = ({ navigation }) => {
@@ -146,60 +222,85 @@ const HistoryScreen = ({ navigation }) => {
   };
 
   const getTodayCount = () => DUMMY_LOGS.filter((log) => log.date === 'Today').length;
-  const getAverageConfidence = () => {
-    const avg = DUMMY_LOGS.reduce((acc, log) => acc + log.confidence, 0) / DUMMY_LOGS.length;
-    return Math.round(avg);
-  };
 
-  const renderLogItem = ({ item, index }) => {
+  const renderLogItem = ({ item }) => {
     const ViolationIcon = getViolationIcon(item.type);
     const violationColor = getViolationColor(item.type);
 
     return (
-      <TouchableOpacity activeOpacity={0.7}>
-        <Card style={styles.logCard} mode="elevated">
-          <View style={styles.cardAccent} backgroundColor={violationColor} />
-          <Card.Content style={styles.logCardContent}>
-            {/* Top Row */}
-            <View style={styles.cardTopRow}>
+      <Card style={styles.logCard} mode="elevated">
+        <View style={[styles.cardAccent, { backgroundColor: violationColor }]} />
+        <Card.Content style={styles.logCardContent}>
+          {/* Evidence Image with Highlight */}
+          <View style={styles.evidenceWrapper}>
+            <EvidenceImage
+              imageSource={item.workerImage}
+              isLocalImage={item.isLocalImage}
+              highlightArea={item.highlightArea}
+              violationColor={violationColor}
+            />
+            {/* AI Detection Label */}
+            <View style={styles.aiDetectionBadge}>
+              <ScanLine size={10} color="#00ff88" />
+              <Text style={styles.aiDetectionText}>AI DETECTED</Text>
+            </View>
+            {/* Violation Label on Image */}
+            <View style={[styles.violationLabelOnImage, { backgroundColor: violationColor }]}>
+              <ViolationIcon size={14} color="#ffffff" />
+              <Text style={styles.violationLabelText}>{item.type}</Text>
+            </View>
+            {/* Timestamp on Image */}
+            <View style={styles.timestampOnImage}>
+              <Clock size={10} color="#ffffff" />
+              <Text style={styles.timestampText}>{item.time}</Text>
+            </View>
+          </View>
+
+          {/* Info Section */}
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
               <View style={[styles.iconContainer, { backgroundColor: `${violationColor}15` }]}>
-                <ViolationIcon size={22} color={violationColor} strokeWidth={2} />
+                <ViolationIcon size={18} color={violationColor} strokeWidth={2} />
               </View>
               <View style={styles.cardMainInfo}>
                 <Text style={[styles.violationType, { color: violationColor }]}>
                   {item.type}
                 </Text>
                 <View style={styles.locationRow}>
-                  <MapPin size={12} color={COLORS.secondary} />
-                  <Text style={styles.locationText}>{item.zone}</Text>
+                  <MapPin size={11} color={COLORS.secondary} />
+                  <Text style={styles.locationText} numberOfLines={1}>{item.zone}</Text>
                 </View>
               </View>
-              <View style={styles.confidenceBadge}>
-                <Text style={styles.confidenceValue}>{item.confidence}%</Text>
-                <Text style={styles.confidenceLabel}>Accuracy</Text>
+              <View style={[styles.statusBadge, { backgroundColor: item.status === 'Resolved' ? `${COLORS.success}15` : `${COLORS.warning}15` }]}>
+                <Text style={[styles.statusText, { color: item.status === 'Resolved' ? COLORS.success : COLORS.warning }]}>
+                  {item.status}
+                </Text>
               </View>
             </View>
-
-            {/* Divider */}
-            <View style={styles.cardDivider} />
 
             {/* Bottom Row */}
             <View style={styles.cardBottomRow}>
-              <View style={styles.detectedTag}>
-                <ScanLine size={12} color={COLORS.error} />
-                <Text style={styles.detectedText}>AI Detected</Text>
-              </View>
-              <View style={styles.timeInfo}>
-                <Clock size={12} color={COLORS.secondary} />
-                <Text style={styles.timeText}>{item.time}</Text>
+              <View style={styles.leftInfo}>
                 <View style={styles.dateBadge}>
+                  <Calendar size={10} color={COLORS.surface} />
                   <Text style={styles.dateText}>{item.date}</Text>
+                </View>
+                <View style={[styles.severityBadge, {
+                  backgroundColor: item.severity === 'Critical' ? '#ef444415' :
+                                   item.severity === 'High' ? '#f59e0b15' :
+                                   item.severity === 'Medium' ? '#3b82f615' : '#10b98115'
+                }]}>
+                  <Text style={[styles.severityText, {
+                    color: item.severity === 'Critical' ? '#ef4444' :
+                           item.severity === 'High' ? '#f59e0b' :
+                           item.severity === 'Medium' ? '#3b82f6' : '#10b981'
+                  }]}>{item.severity}</Text>
                 </View>
               </View>
             </View>
-          </Card.Content>
-        </Card>
-      </TouchableOpacity>
+          </View>
+        </Card.Content>
+      </Card>
     );
   };
 
@@ -224,11 +325,11 @@ const HistoryScreen = ({ navigation }) => {
         </Surface>
 
         <Surface style={styles.statCard} elevation={2}>
-          <View style={[styles.statIconBg, { backgroundColor: `${COLORS.success}15` }]}>
-            <TrendingUp size={18} color={COLORS.success} />
+          <View style={[styles.statIconBg, { backgroundColor: `${COLORS.info}15` }]}>
+            <Camera size={18} color={COLORS.info} />
           </View>
-          <Text style={styles.statValue}>{getAverageConfidence()}%</Text>
-          <Text style={styles.statLabel}>Avg. Accuracy</Text>
+          <Text style={styles.statValue}>{DUMMY_LOGS.length}</Text>
+          <Text style={styles.statLabel}>Evidence</Text>
         </Surface>
       </View>
 
@@ -299,7 +400,6 @@ const HistoryScreen = ({ navigation }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerBackground} />
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <ArrowLeft size={22} color={COLORS.surface} />
@@ -337,285 +437,5 @@ const HistoryScreen = ({ navigation }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 50,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.surface,
-    letterSpacing: 0.5,
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 6,
-    gap: 4,
-  },
-  headerBadgeText: {
-    fontSize: 11,
-    color: COLORS.surface,
-    fontWeight: '500',
-  },
-  headerRight: {
-    width: 42,
-  },
-  listContent: {
-    padding: 16,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  listHeader: {
-    marginBottom: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-  },
-  statIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: COLORS.secondary,
-    marginTop: 2,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchBar: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    height: 50,
-  },
-  searchInput: {
-    fontSize: 14,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  filterTabActive: {
-    backgroundColor: COLORS.primary,
-  },
-  filterTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.secondary,
-  },
-  filterTabTextActive: {
-    color: COLORS.surface,
-  },
-  resultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  resultsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  resultsCount: {
-    fontSize: 13,
-    color: COLORS.secondary,
-    fontWeight: '500',
-  },
-  logCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  cardAccent: {
-    height: 4,
-    width: '100%',
-  },
-  logCardContent: {
-    padding: 16,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardMainInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  violationType: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  locationText: {
-    fontSize: 13,
-    color: COLORS.secondary,
-  },
-  confidenceBadge: {
-    alignItems: 'center',
-    backgroundColor: `${COLORS.success}10`,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  confidenceValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.success,
-  },
-  confidenceLabel: {
-    fontSize: 9,
-    color: COLORS.secondary,
-    marginTop: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: 14,
-  },
-  cardBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detectedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${COLORS.error}10`,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
-  },
-  detectedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.error,
-  },
-  timeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timeText: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    fontWeight: '500',
-  },
-  dateBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 4,
-  },
-  dateText: {
-    fontSize: 10,
-    color: COLORS.surface,
-    fontWeight: '600',
-  },
-  separator: {
-    height: 12,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIconSurface: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: `${COLORS.success}10`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 12,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-});
 
 export default HistoryScreen;
