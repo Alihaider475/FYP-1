@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/000001_jpg.rf.13bbbb75beaf9a127850c10c49992ba3.jpg",
         "backgroundColor": "#0f172a"
       },
-      "package": "com.safesite.ai"
+      "package": "com.safesite.ai",
     },
     "web": {
       "favicon": "./assets/000001_jpg.rf.13bbbb75beaf9a127850c10c49992ba3.jpg",

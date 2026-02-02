@@ -1,32 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  StatusBar,
-  TouchableOpacity,
-  Animated,
-  Modal,
-  TextInput,
-} from 'react-native';
-import {
-  Text,
-  Surface,
-} from 'react-native-paper';
-import {
-  Camera,
-  ArrowLeft,
-  AlertTriangle,
-  Cpu,
-  Radio,
-  Shield,
-  Activity,
-  Play,
-  Scan,
-  Crosshair,
-  Power,
-  MapPin,
-  X,
-  Check,
-} from 'lucide-react-native';
+import {View,StatusBar,TouchableOpacity,Animated,Modal,TextInput} from 'react-native';
+import {Text,Surface } from 'react-native-paper';
+import {Camera,ArrowLeft,AlertTriangle,Cpu,Radio,Shield,Activity,Play,Scan,Crosshair,Power,MapPin,X,
+  Check,} from 'lucide-react-native';
 import { styles, COLORS, CAMERA_HEIGHT } from './styles/DetectionScreenStyles';
 
 const DetectionScreen = ({ navigation, onStopDetection }) => {

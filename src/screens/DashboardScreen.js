@@ -302,8 +302,7 @@ const DashboardScreen = ({ navigation, onLogout, userName = 'Site Manager' }) =>
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
 
-        {/* Footer */}
-        <Text style={styles.footerText}>SafeSite AI v1.0.0</Text>
+       
       </ScrollView>
     </View>
   );

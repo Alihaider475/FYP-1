@@ -310,17 +310,6 @@ const SiteSettingsScreen = ({ navigation, userRole, onRevokeCameraPermission }) 
             {saving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </View>
-
-        {/* Info Card */}
-        <Card style={styles.infoCard} mode="elevated">
-          <Card.Content style={styles.infoCardContent}>
-            <Settings size={20} color={COLORS.secondary} />
-            <Text style={styles.infoText}>
-              Changes will apply to all active cameras on this site. Some
-              settings may require a system restart to take effect.
-            </Text>
-          </Card.Content>
-        </Card>
       </ScrollView>
     </View>
   );
