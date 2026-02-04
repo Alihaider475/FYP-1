@@ -1,22 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
-  TextInput as RNTextInput,
-  StatusBar,
+import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,Alert,TextInput as RNTextInput,StatusBar,
 } from 'react-native';
 import { Text } from 'react-native-paper';
-import {
-  ArrowLeft,
-  ShieldCheck,
-  RefreshCw,
-  CheckCircle2,
-} from 'lucide-react-native';
+import {ArrowLeft,ShieldCheck,RefreshCw,CheckCircle2,} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles, COLORS } from './styles/VerifyCodeStyles';
 

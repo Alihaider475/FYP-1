@@ -1,39 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  ScrollView,
-  StatusBar,
-  TouchableOpacity,
-  Image,
-  Alert,
-  Share,
-  ActivityIndicator,
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Surface,
-  Button,
-  Divider,
-} from 'react-native-paper';
-import {
-  ArrowLeft,
-  Camera,
-  AlertTriangle,
-  MapPin,
-  Clock,
-  Calendar,
-  Gauge,
-  CheckCircle,
-  Share2,
-  HardHat,
-  Shirt,
-  Smartphone,
-  ScanLine,
-  FileText,
-  Shield,
-  User,
-} from 'lucide-react-native';
+import {View,ScrollView,StatusBar,TouchableOpacity,Image,Alert,Share,ActivityIndicator} from 'react-native';
+import {Card,Text,Surface,Button,Divider} from 'react-native-paper';
+import {ArrowLeft,Camera,AlertTriangle,MapPin,Clock,Calendar,Gauge,CheckCircle,Share2,HardHat,Shirt,
+  Smartphone,ScanLine,FileText,Shield,User,} from 'lucide-react-native';
 import { styles, COLORS } from './styles/ViolationDetailScreenStyles';
 
 const getViolationIcon = (type) => {

@@ -1,20 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  StatusBar,
-  Dimensions,
-  Animated,
-  Image,
-} from 'react-native';
+import {View,StyleSheet,StatusBar,Dimensions,Animated,Image} from 'react-native';
 import { Text, Button } from 'react-native-paper';
-import {
-  Shield,
-  HardHat,
-  Scan,
-  ChevronRight,
-  CheckCircle,
-} from 'lucide-react-native';
+import {Shield,HardHat,Scan,ChevronRight,CheckCircle} from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 

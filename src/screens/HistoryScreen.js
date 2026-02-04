@@ -1,31 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  FlatList,
-  StatusBar,
-  TouchableOpacity,
-  RefreshControl,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Surface,
-  Searchbar,
-} from 'react-native-paper';
-import {
-  ArrowLeft,
-  AlertTriangle,
-  Clock,
-  MapPin,
-  HardHat,
-  Shirt,
-  Smartphone,
-  ScanLine,
-  Shield,
-  Calendar,
-  Camera,
+import {View,FlatList,StatusBar,TouchableOpacity,RefreshControl,Image,ActivityIndicator,} from 'react-native';
+import {Card,Text,Surface,Searchbar,} from 'react-native-paper';
+import {ArrowLeft,AlertTriangle,Clock,MapPin,HardHat,Shirt,Smartphone,ScanLine,Shield,Calendar,Camera,
 } from 'lucide-react-native';
 import { styles, COLORS } from './styles/HistoryScreenStyles';
 

@@ -1,23 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
+import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,Alert,
 } from 'react-native';
 import { TextInput, Text } from 'react-native-paper';
-import {
-  Shield,
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react-native';
+import {Shield,Eye,EyeOff,Mail,Lock,ArrowRight,Sparkles,} from 'lucide-react-native';
 import { styles, COLORS, LOGIN_COLORS } from './styles/LoginScreenStyles';
 import { getUserRole, getRoleDisplayName } from '../utils/userRoles';
 import { supabase } from '../auth/supabase';

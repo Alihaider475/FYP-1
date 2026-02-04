@@ -1,29 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
+import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,Alert,
 } from 'react-native';
 import { TextInput, Text, Snackbar } from 'react-native-paper';
-import {
-  Shield,
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  ArrowRight,
-  ArrowLeft,
-  UserPlus,
-  ShieldAlert,
-  CheckCircle,
-  Clock,
-  Building,
-} from 'lucide-react-native';
+import {Shield,Eye,EyeOff,Mail,Lock,User,ArrowRight,ArrowLeft,UserPlus,ShieldAlert,CheckCircle,Clock,
+  Building} from 'lucide-react-native';
 import { styles, COLORS, REGISTER_COLORS } from './styles/RegisterScreenStyles';
 import { supabase } from '../auth/supabase';
 

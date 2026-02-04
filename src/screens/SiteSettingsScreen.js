@@ -1,35 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StatusBar,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Surface,
-  Switch,
-  Button,
-  Divider,
-} from 'react-native-paper';
-import {
-  ArrowLeft,
-  Settings,
-  Brain,
-  HardHat,
-  Shirt,
-  Smartphone,
-  Bell,
-  Volume2,
-  Save,
-  RotateCcw,
-  Camera,
-  ShieldCheck,
-  Users,
-  ChevronRight,
-} from 'lucide-react-native';
+import {View,ScrollView,StatusBar,TouchableOpacity,Alert} from 'react-native';
+import {Card,Text,Surface,Switch,Button,Divider,} from 'react-native-paper';
+import {ArrowLeft,Settings,Brain,HardHat,Shirt,Smartphone,Bell,Volume2,Save,RotateCcw,Camera,ShieldCheck,Users,
+  ChevronRight} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { styles, COLORS } from './styles/SiteSettingsScreenStyles';
 import { USER_ROLES, isAdmin } from '../utils/userRoles';

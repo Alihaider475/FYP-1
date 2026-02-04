@@ -1,33 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+import {View,ScrollView,TouchableOpacity,Animated,Alert,KeyboardAvoidingView,Platform,
 } from 'react-native';
-import {
-  TextInput,
-  Text,
-  Card,
-  IconButton,
-  Snackbar,
-  Divider,
-  Badge,
-} from 'react-native-paper';
-import {
-  Shield,
-  UserPlus,
-  Trash2,
-  Mail,
-  Users,
-  ArrowLeft,
-  ShieldCheck,
-  AlertCircle,
-  CheckCircle,
-  Search,
+import {TextInput,Text,Card,IconButton,Snackbar,Divider,Badge} from 'react-native-paper';
+import {Shield,UserPlus,Trash2,Mail,Users,ArrowLeft,ShieldCheck,AlertCircle,CheckCircle,Search,
 } from 'lucide-react-native';
 import { styles, COLORS } from './styles/WhitelistManagerScreenStyles';
 

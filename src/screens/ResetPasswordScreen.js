@@ -1,24 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
-  StatusBar,
+import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,Alert,StatusBar,
 } from 'react-native';
 import { TextInput, Text } from 'react-native-paper';
-import {
-  Eye,
-  EyeOff,
-  Lock,
-  ArrowLeft,
-  Check,
-  LockKeyhole,
-  CircleCheck,
-} from 'lucide-react-native';
+import {Eye,EyeOff,Lock,ArrowLeft,Check,LockKeyhole,CircleCheck} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles, COLORS } from './styles/ResetPasswordStyles';
 import { supabase } from '../auth/supabase';

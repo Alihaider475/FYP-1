@@ -1,35 +1,8 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Dimensions,
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Surface,
-  Avatar,
-  Button,
-} from 'react-native-paper';
-import {
-  Camera,
-  FileText,
-  Settings,
-  User,
-  LogOut,
-  Shield,
-  AlertTriangle,
-  TrendingUp,
-  Bell,
-  ChevronRight,
-  Scan,
-  Activity,
-  CheckCircle,
-} from 'lucide-react-native';
-
+import {View,StyleSheet,ScrollView,TouchableOpacity,StatusBar,Dimensions,} from 'react-native';
+import {Card,Text,Surface,Avatar,Button,} from 'react-native-paper';
+import {Camera,FileText,Settings,User,LogOut,Shield,AlertTriangle,TrendingUp,Bell,ChevronRight,Scan,
+  Activity,CheckCircle,} from 'lucide-react-native';
 const { width } = Dimensions.get('window');
 
 const COLORS = {
