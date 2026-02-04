@@ -1,43 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  Alert,
-  RefreshControl,
-  StatusBar,
-} from 'react-native';
-import {
-  Text,
-  Surface,
-  Snackbar,
-} from 'react-native-paper';
-import {
-  Shield,
-  UserCheck,
-  UserX,
-  Mail,
-  Users,
-  ArrowLeft,
-  ShieldCheck,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Briefcase,
-  Calendar,
-  UserPlus,
-  AlertTriangle,
-  ChevronRight,
-  RefreshCw,
-} from 'lucide-react-native';
+import {View,ScrollView,TouchableOpacity,Animated,Alert,RefreshControl,StatusBar} from 'react-native';
+import {Text,Surface,Snackbar} from 'react-native-paper';
+import {Shield,UserCheck,UserX,Mail,Users,ArrowLeft,ShieldCheck,Clock,CheckCircle,XCircle,Briefcase,
+Calendar,UserPlus,AlertTriangle,ChevronRight,RefreshCw,} from 'lucide-react-native';
 import { styles, COLORS } from './styles/AdminApprovalScreenStyles';
-import {
-  getPendingRequests,
-  removePendingRequest,
-  addToApproved,
-  addToDenied,
-  getApprovedEmails,
+import {getPendingRequests,removePendingRequest,addToApproved,addToDenied,getApprovedEmails,
 } from './RegisterScreen';
 
 const AdminApprovalScreen = ({ onBack }) => {

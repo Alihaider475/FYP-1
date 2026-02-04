@@ -1,29 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  StatusBar,
-  Alert,
-} from 'react-native';
+import {View,ScrollView,TouchableOpacity,Animated,StatusBar,Alert} from 'react-native';
 import { Text, Surface } from 'react-native-paper';
-import {
-  Shield,
-  ShieldCheck,
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  Settings,
-  LogOut,
-  Bell,
-  Activity,
-  TrendingUp,
-  AlertTriangle,
-  ChevronRight,
-  RefreshCw,
-} from 'lucide-react-native';
+import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,Settings,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
+ChevronRight,RefreshCw} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getPendingRequests, getApprovedEmails } from './RegisterScreen';
 import { supabase } from '../auth/supabase';

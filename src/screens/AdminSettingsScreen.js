@@ -1,28 +1,8 @@
 import React, { useState } from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Switch,
-  Alert,
-} from 'react-native';
+import {View,ScrollView,TouchableOpacity,StatusBar,Switch,Alert} from 'react-native';
 import { Text, Surface } from 'react-native-paper';
-import {
-  ArrowLeft,
-  Settings,
-  Bell,
-  Shield,
-  Mail,
-  Lock,
-  Users,
-  Database,
-  RefreshCw,
-  ChevronRight,
-  ToggleLeft,
-  Moon,
-  Globe,
-} from 'lucide-react-native';
+import {ArrowLeft,Settings,Bell,Shield,Mail,Lock,Users,Database,RefreshCw,ChevronRight,ToggleLeft,Moon,
+  Globe,} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {

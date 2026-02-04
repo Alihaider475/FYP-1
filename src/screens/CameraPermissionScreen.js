@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Animated,
-  Linking,
-} from 'react-native';
+import {View,Animated,Linking} from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { Camera, Shield, AlertCircle } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
