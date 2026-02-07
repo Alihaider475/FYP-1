@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {View,StyleSheet,ScrollView,StatusBar,TouchableOpacity,Alert,KeyboardAvoidingView,Platform,
 } from 'react-native';
-import {Card,Text,Surface,TextInput,Button,Avatar,DividerModal,Portal,} from 'react-native-paper';
+import {Card,Text,Surface,TextInput,Button,Avatar,Divider,Modal,Portal,} from 'react-native-paper';
 import {ArrowLeft,User,Mail,BadgeCheck,Shield,Lock,Trash2,Camera,Save,AlertTriangle,Eye,EyeOff,
 } from 'lucide-react-native';
 
