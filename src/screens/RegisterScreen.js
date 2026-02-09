@@ -575,13 +575,8 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
               </View>
             </View>
 
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Shield size={16} color={COLORS.secondary} />
-              <Text style={styles.footerText}>
-                Your data is protected with encryption
-              </Text>
-            </View>
+            
+            
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

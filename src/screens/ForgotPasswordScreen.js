@@ -44,6 +44,10 @@ const ForgotPasswordScreen = ({ onNavigateToVerify, onBackToLogin }) => {
     return emailRegex.test(email);
   };
 
+  const generateVerificationCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
   const handleSendCode = async () => {
     setEmailError('');
 
@@ -60,41 +64,19 @@ const ForgotPasswordScreen = ({ onNavigateToVerify, onBackToLogin }) => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        email.toLowerCase().trim(),
-        {
-          redirectTo: 'safesite://reset-password',
-        }
-      );
+      // Generate 6-digit verification code
+      const verificationCode = generateVerificationCode();
 
-      if (error) {
-        if (error.message.includes('rate limit')) {
-          Alert.alert(
-            'Too Many Requests',
-            'Please wait a few minutes before requesting another password reset.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert('Error', error.message, [{ text: 'OK' }]);
-        }
-        setLoading(false);
-        return;
+      // TODO: Send verification code to email using email service
+      // For now, we'll navigate to verify screen with the code
+      // In production, you should send this code via email first
+
+      if (onNavigateToVerify) {
+        onNavigateToVerify({
+          email: email.toLowerCase().trim(),
+          code: verificationCode,
+        });
       }
-
-      Alert.alert(
-        'Reset Email Sent',
-        `We've sent a password reset link to ${email}. Please check your inbox and click the link to reset your password.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              if (onBackToLogin) {
-                onBackToLogin();
-              }
-            },
-          },
-        ]
-      );
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
         { text: 'OK' },
