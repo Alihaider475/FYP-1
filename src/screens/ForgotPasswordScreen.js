@@ -143,10 +143,7 @@ const ForgotPasswordScreen = ({ onNavigateToVerify, onBackToLogin }) => {
 
             {/* Header Text */}
             <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>Forgot Password?</Text>
-              <Text style={styles.subtitle}>
-                No worries! Enter your email address and we'll send you a verification code to reset your password.
-              </Text>
+              <Text style={styles.title}>Forgot Password</Text>
             </View>
 
             {/* Form Card */}

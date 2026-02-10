@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {View,StyleSheet,ScrollView,StatusBar,TouchableOpacity,Alert,KeyboardAvoidingView,Platform,
 } from 'react-native';
 import {Card,Text,Surface,TextInput,Button,Avatar,Divider,Modal,Portal,} from 'react-native-paper';
-import {ArrowLeft,User,Mail,BadgeCheck,Shield,Lock,Trash2,Camera,Save,AlertTriangle,Eye,EyeOff,
+import {ArrowLeft,User,Mail,BadgeCheck,Shield,Lock,Trash2,Camera,Save,Eye,EyeOff,
 } from 'lucide-react-native';
 
 const COLORS = {
@@ -268,9 +268,6 @@ const ProfileScreen = ({ navigation, userName = 'Site Manager' }) => {
                     </Surface>
                     <View style={styles.securityTextContainer}>
                       <Text style={styles.securityTitle}>Password</Text>
-                      <Text style={styles.securitySubtitle}>
-                        Last changed 30 days ago
-                      </Text>
                     </View>
                   </View>
                   <Button
@@ -289,21 +286,11 @@ const ProfileScreen = ({ navigation, userName = 'Site Manager' }) => {
 
           {/* Danger Zone Section */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <AlertTriangle size={20} color={COLORS.error} />
-              <Text style={[styles.sectionTitle, { color: COLORS.error }]}>
-                Danger Zone
-              </Text>
-            </View>
             <Card
               style={[styles.card, styles.dangerCard]}
               mode="elevated"
             >
               <Card.Content style={styles.dangerContent}>
-                <Text style={styles.dangerText}>
-                  Once you delete your account, there is no going back. Please
-                  be certain.
-                </Text>
                 <Button
                   mode="outlined"
                   onPress={handleDeleteAccount}

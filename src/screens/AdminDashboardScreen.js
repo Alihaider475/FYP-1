@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {View,ScrollView,TouchableOpacity,Animated,StatusBar,Alert} from 'react-native';
 import { Text, Surface } from 'react-native-paper';
-import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,Settings,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
-ChevronRight,RefreshCw} from 'lucide-react-native';
+import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
+ChevronRight,RefreshCw,Mail} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getPendingRequests, getApprovedEmails } from './RegisterScreen';
 import { supabase } from '../auth/supabase';
@@ -117,13 +117,13 @@ const AdminDashboardScreen = ({
       onPress: () => navigation.navigate('AdminApproval'),
     },
     {
-      id: 'settings',
-      title: 'System Settings',
-      subtitle: 'Configure app settings',
-      icon: Settings,
-      color: '#8b5cf6',
-      bgColor: 'rgba(139, 92, 246, 0.1)',
-      onPress: () => navigation.navigate('AdminSettings'),
+      id: 'whitelist',
+      title: 'Whitelist Manager',
+      subtitle: 'Manage whitelisted emails',
+      icon: Mail,
+      color: '#ec4899',
+      bgColor: 'rgba(236, 72, 153, 0.1)',
+      onPress: () => navigation.navigate('WhitelistManager'),
     },
   ];
 
@@ -259,11 +259,8 @@ const AdminDashboardScreen = ({
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Shield size={16} color={COLORS.muted} />
-            <Text style={styles.footerText}>SafeSite AI Admin Panel</Text>
-          </View>
+          
+          
         </Animated.View>
       </ScrollView>
     </View>
@@ -422,11 +419,13 @@ const styles = {
   },
   sectionHeader: {
     marginBottom: 16,
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: COLORS.primary,
+    textAlign: 'center',
   },
   menuCard: {
     flexDirection: 'row',

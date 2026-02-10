@@ -187,7 +187,7 @@ const SiteSettingsScreen = ({ navigation, userRole, onRevokeCameraPermission }) 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Brain size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>Active AI Models</Text>
+            <Text style={styles.sectionTitle}>Active PPE</Text>
           </View>
           <Card style={styles.card} mode="elevated">
             <Card.Content style={styles.cardContent}>

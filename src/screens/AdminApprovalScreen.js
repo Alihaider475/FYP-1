@@ -228,17 +228,12 @@ const AdminApprovalScreen = ({ onBack }) => {
               <Text style={styles.emptySubtitle}>
                 All user registration requests have been processed
               </Text>
-              <View style={styles.emptyTip}>
-                <AlertTriangle size={14} color={COLORS.secondary} />
-                <Text style={styles.emptyTipText}>
-                  Pull down to refresh and check for new requests
-                </Text>
-              </View>
             </View>
           ) : (
-            /* Request Cards */
-            pendingRequests.map((request, index) => (
-              <View key={request.id} style={styles.requestCard}>
+            <>
+              {/* Request Cards */}
+              {pendingRequests.map((request, index) => (
+                <View key={request.id} style={styles.requestCard}>
                 {/* Card Header */}
                 <View style={styles.cardHeader}>
                   <View
@@ -304,7 +299,8 @@ const AdminApprovalScreen = ({ onBack }) => {
                   </TouchableOpacity>
                 </View>
               </View>
-            ))
+            ))}
+            </>
           )}
 
           {/* Footer Info */}

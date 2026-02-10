@@ -161,9 +161,6 @@ const WhitelistManagerScreen = ({ onBack }) => {
                 <ShieldCheck size={32} color={COLORS.accent} strokeWidth={2} />
               </View>
               <Text style={styles.welcomeText}>Whitelist Manager</Text>
-              <Text style={styles.subtitleText}>
-                Manage authorized user registrations
-              </Text>
             </View>
 
             {/* Stats Card */}
@@ -172,12 +169,6 @@ const WhitelistManagerScreen = ({ onBack }) => {
                 <Users size={24} color={COLORS.accent} />
                 <Text style={styles.statNumber}>{authorizedEmails.length}</Text>
                 <Text style={styles.statLabel}>Authorized Users</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Shield size={24} color={COLORS.success} />
-                <Text style={[styles.statNumber, { color: COLORS.success }]}>Active</Text>
-                <Text style={styles.statLabel}>Protection Status</Text>
               </View>
             </View>
 
@@ -300,12 +291,7 @@ const WhitelistManagerScreen = ({ onBack }) => {
             </Card>
 
             {/* Info Footer */}
-            <View style={styles.footer}>
-              <Shield size={16} color={COLORS.secondary} />
-              <Text style={styles.footerText}>
-                Only whitelisted emails can register for SafeSite AI
-              </Text>
-            </View>
+            
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

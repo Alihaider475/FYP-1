@@ -30,6 +30,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import AdminApprovalScreen from './src/screens/AdminApprovalScreen';
 import AdminSettingsScreen from './src/screens/AdminSettingsScreen';
+import WhitelistManagerScreen from './src/screens/WhitelistManagerScreen';
 
 // Import User Roles utilities
 import { USER_ROLES, getUserRole, isAdmin } from './src/utils/userRoles';
@@ -142,6 +143,14 @@ const AdminStack = ({ userName, userEmail, onLogout }) => (
       )}
     </Stack.Screen>
     <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+    <Stack.Screen name="WhitelistManager">
+      {(props) => (
+        <WhitelistManagerScreen
+          {...props}
+          onBack={() => props.navigation.goBack()}
+        />
+      )}
+    </Stack.Screen>
   </Stack.Navigator>
 );
 

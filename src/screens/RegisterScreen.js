@@ -369,10 +369,7 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
               <View style={styles.logoContainer}>
                 <UserPlus size={32} color={COLORS.accent} strokeWidth={2} />
               </View>
-              <Text style={styles.welcomeText}>Request Access</Text>
-              <Text style={styles.subtitleText}>
-                Submit your registration for admin approval
-              </Text>
+              <Text style={styles.welcomeText}>Create Account</Text>
             </View>
 
             {/* Form Card */}
@@ -540,12 +537,7 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
               </View>
 
               {/* Info Box */}
-              <View style={styles.infoBox}>
-                <Clock size={16} color={COLORS.accent} />
-                <Text style={styles.infoText}>
-                  Your request will be reviewed by the Site Administrator. You'll receive access once approved.
-                </Text>
-              </View>
+             
 
               {/* Submit Request Button */}
               <TouchableOpacity
