@@ -330,12 +330,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    console.log('🔴 Logout triggered');
     try {
       await supabase.auth.signOut();
+      console.log(' Supabase sign-out successful');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error(' Logout error:', error);
     }
-    // State will be reset by the auth state listener
+    
+    // Reset all state - this will trigger a re-render and switch from AdminStack to AuthStack
+    console.log(' Resetting auth state');
     setIsAuthenticated(false);
     setHasCameraPermission(false);
     setRevokedFromSettings(false);
@@ -343,6 +347,8 @@ export default function App() {
     setUserRole(USER_ROLES.MANAGER);
     setUserEmail('');
     setUserId(null);
+    setShowWelcome(false);
+    console.log(' Auth state reset complete');
   };
 
   // Show loading screen while checking session
@@ -368,6 +374,15 @@ export default function App() {
 
   // Check if user is admin
   const userIsAdmin = isAdmin(userRole);
+  
+  // Debug logging
+  console.log('🔵 App State:', {
+    isAuthenticated,
+    userRole,
+    userIsAdmin,
+    userName,
+    userEmail,
+  });
 
   // Show Camera Permission Screen after login but before dashboard
   // ONLY for normal users, NOT for admins

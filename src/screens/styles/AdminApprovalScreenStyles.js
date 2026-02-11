@@ -381,6 +381,24 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
+
+  // Status Badge
+  statusBadgeContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });
 
 export default styles;

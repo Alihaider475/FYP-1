@@ -4,8 +4,7 @@ import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,
 import { TextInput, Text, Snackbar } from 'react-native-paper';
 import {Shield,Eye,EyeOff,Mail,Lock,User,ArrowRight,ArrowLeft,UserPlus,ShieldAlert,CheckCircle,Clock,
   Building} from 'lucide-react-native';
-import { styles, COLORS, REGISTER_COLORS } from './styles/RegisterScreenStyles';
-import { supabase } from '../auth/supabase';
+import { styles, COLORS } from './styles/RegisterScreenStyles';
 
 // Simulated Database - Approved Users (can register directly)
 export const APPROVED_EMAILS = [
@@ -13,10 +12,27 @@ export const APPROVED_EMAILS = [
 ];
 
 // Simulated Database - Pending Registration Requests
-export let PENDING_REQUESTS = [];
+export let PENDING_REQUESTS = [
+  {
+    id: '1',
+    fullName: 'Ali Haider',
+    email: 'ali.haider@company.com',
+    jobTitle: 'Safety Manager',
+    requestedAt: '2024-02-11T10:30:00Z',
+    status: 'pending',
+  },
+  {
+    id: '2',
+    fullName: 'Tariq',
+    email: 'tariq@company.com',
+    jobTitle: 'Site Supervisor',
+    requestedAt: '2024-02-11T11:15:00Z',
+    status: 'pending',
+  },
+];
 
-// Simulated Database - Denied Requests
-export let DENIED_REQUESTS = [];
+// Simulated Database - Registered Users (users who completed registration)
+export let REGISTERED_USERS = [];
 
 // Helper functions to manage requests (exported for AdminApprovalScreen)
 export const addPendingRequest = (request) => {
@@ -30,33 +46,46 @@ export const removePendingRequest = (email) => {
 };
 
 export const addToApproved = (email) => {
-  if (!APPROVED_EMAILS.includes(email.toLowerCase())) {
-    APPROVED_EMAILS.push(email.toLowerCase());
+  const emailLower = email.toLowerCase();
+  if (!APPROVED_EMAILS.includes(emailLower)) {
+    APPROVED_EMAILS.push(emailLower);
   }
 };
 
-export const addToDenied = (request) => {
-  DENIED_REQUESTS = [...DENIED_REQUESTS, { ...request, deniedAt: new Date().toISOString() }];
+export const addRegisteredUser = (user) => {
+  const userExists = REGISTERED_USERS.some(
+    (u) => u.email.toLowerCase() === user.email.toLowerCase()
+  );
+  if (!userExists) {
+    REGISTERED_USERS = [...REGISTERED_USERS, { ...user, registeredAt: new Date().toISOString() }];
+  }
 };
 
 export const getPendingRequests = () => PENDING_REQUESTS;
 export const getApprovedEmails = () => APPROVED_EMAILS;
+export const getRegisteredUsers = () => REGISTERED_USERS;
 
 const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
+  // Form input states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  
+  // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Loading state
   const [loading, setLoading] = useState(false);
 
-  // Snackbar states
+  // Notification states
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarType, setSnackbarType] = useState('error'); // 'error', 'success', or 'pending'
+  const [snackbarType, setSnackbarType] = useState('error');
 
+  // Form validation error states
   const [errors, setErrors] = useState({
     fullName: '',
     email: '',
@@ -65,10 +94,12 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
     jobTitle: '',
   });
 
+  // Animation references
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
+    // Run animations when component loads
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -83,12 +114,8 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
     ]).start();
   }, []);
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const validateForm = () => {
+    // Create empty error object
     const newErrors = {
       fullName: '',
       email: '',
@@ -98,227 +125,171 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
     };
     let isValid = true;
 
+    // Check if full name is entered
     if (!fullName.trim()) {
       newErrors.fullName = 'Full name is required';
       isValid = false;
-    } else if (fullName.trim().length < 2) {
-      newErrors.fullName = 'Name must be at least 2 characters';
-      isValid = false;
     }
 
+    // Check if email is entered
     if (!email.trim()) {
       newErrors.email = 'Email is required';
       isValid = false;
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Please enter a valid email';
-      isValid = false;
     }
 
+    // Check if job title is entered
     if (!jobTitle.trim()) {
       newErrors.jobTitle = 'Job title is required';
       isValid = false;
     }
 
+    // Check if password is entered
     if (!password.trim()) {
       newErrors.password = 'Password is required';
       isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-      isValid = false;
     }
 
-    if (!confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
-      isValid = false;
-    } else if (password !== confirmPassword) {
+    // Check if passwords match
+    if (confirmPassword !== password) {
       newErrors.confirmPassword = 'Passwords do not match';
       isValid = false;
     }
 
+    // Update error state
     setErrors(newErrors);
     return isValid;
   };
 
-  // Check if email is already approved
-  const isEmailApproved = (emailToCheck) => {
-    const normalizedEmail = emailToCheck.toLowerCase().trim();
-    return APPROVED_EMAILS.some(
-      (approvedEmail) => approvedEmail.toLowerCase() === normalizedEmail
-    );
+  const handleRegister = () => {
+    // First check if form is valid
+    if (!validateForm()) return;
+
+    // Show loading state
+    setLoading(true);
+
+    // Simulate submission delay (like API call)
+    setTimeout(() => {
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check if email is already approved by admin
+      const isApproved = getApprovedEmails().includes(normalizedEmail);
+
+      if (isApproved) {
+        // Email is approved - registration successful!
+        const successUser = {
+          id: Date.now().toString(),
+          fullName: fullName.trim(),
+          email: normalizedEmail,
+          jobTitle: jobTitle.trim(),
+          password: password,
+          status: 'registered',
+        };
+
+        addRegisteredUser(successUser);
+        setLoading(false);
+
+        // Show success - user can now login
+        Alert.alert(
+          'Registration Successful!',
+          `Welcome ${fullName}! Your account has been created.\n\nYou can now login to SafeSite AI.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Clear all form fields
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                setJobTitle('');
+                
+                // Go back to login screen
+                if (onBackToLogin) {
+                  onBackToLogin();
+                }
+              },
+            },
+          ]
+        );
+
+        // Show success notification
+        showSnackbar('Account created successfully! You can now login.', 'success');
+      } else {
+        // Email not approved yet - add to pending requests
+        const newRequest = {
+          id: Date.now().toString(),
+          fullName: fullName.trim(),
+          email: normalizedEmail,
+          jobTitle: jobTitle.trim(),
+          requestedAt: '2024-02-11T12:00:00Z',
+          status: 'pending',
+        };
+
+        addPendingRequest(newRequest);
+        setLoading(false);
+
+        // Show pending message
+        Alert.alert(
+          'Registration Submitted',
+          `Hi ${fullName}, your registration request has been submitted.\n\nPlease wait for admin approval.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Clear all form fields
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                setJobTitle('');
+                
+                // Go back to login screen
+                if (onBackToLogin) {
+                  onBackToLogin();
+                }
+              },
+            },
+          ]
+        );
+
+        // Show pending notification
+        showSnackbar('Registration request submitted. Waiting for admin approval.', 'pending');
+      }
+    }, 500);
   };
 
-  // Check if request is already pending
-  const isRequestPending = (emailToCheck) => {
-    const normalizedEmail = emailToCheck.toLowerCase().trim();
-    return PENDING_REQUESTS.some(
-      (request) => request.email.toLowerCase() === normalizedEmail
-    );
+  const handleBackToLogin = () => {
+    // Navigate back to login screen
+    if (onBackToLogin) {
+      onBackToLogin();
+    }
   };
 
-  // Check if request was denied
-  const isRequestDenied = (emailToCheck) => {
-    const normalizedEmail = emailToCheck.toLowerCase().trim();
-    return DENIED_REQUESTS.some(
-      (request) => request.email.toLowerCase() === normalizedEmail
-    );
-  };
-
-  // Show snackbar notification
+  // Show notification message at bottom of screen
   const showSnackbar = (message, type = 'error') => {
     setSnackbarMessage(message);
     setSnackbarType(type);
     setSnackbarVisible(true);
   };
 
-  const handleRegister = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Check if request is already pending
-    if (isRequestPending(email)) {
-      setLoading(false);
-      Alert.alert(
-        'Request Already Pending',
-        'Your registration request is already under review. Please wait for admin approval.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      showSnackbar('Your request is already pending approval.', 'pending');
-      return;
-    }
-
-    // Check if request was previously denied
-    if (isRequestDenied(email)) {
-      setLoading(false);
-      Alert.alert(
-        'Request Previously Denied',
-        'Your registration request was previously denied. Please contact your Site Administrator for more information.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      showSnackbar('Your previous request was denied. Contact your administrator.', 'error');
-      return;
-    }
-
-    try {
-      // Register with Supabase
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            job_title: jobTitle.trim(),
-            is_approved: isEmailApproved(email),
-          },
-        },
-      });
-
-      if (error) {
-        // Handle specific Supabase auth errors
-        if (error.message.includes('User already registered')) {
-          setErrors((prev) => ({ ...prev, email: 'This email is already registered' }));
-          showSnackbar('This email is already registered. Try logging in.', 'error');
-        } else if (error.message.includes('Password')) {
-          setErrors((prev) => ({ ...prev, password: error.message }));
-          showSnackbar(error.message, 'error');
-        } else {
-          Alert.alert('Registration Error', error.message, [{ text: 'OK' }]);
-          showSnackbar(error.message, 'error');
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Check if email is already approved (can register directly)
-      if (isEmailApproved(email)) {
-        showSnackbar('Account created successfully! Please check your email to verify.', 'success');
-        Alert.alert(
-          'Account Created',
-          'Your account has been created. Please check your email to verify your account, then you can log in.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (onRegisterSuccess) {
-                  onRegisterSuccess({
-                    id: data.user?.id,
-                    fullName,
-                    email: normalizedEmail,
-                    jobTitle
-                  });
-                }
-              },
-            },
-          ]
-        );
-        setLoading(false);
-        return;
-      }
-
-      // Submit new registration request for non-approved emails
-      const newRequest = {
-        id: data.user?.id || Date.now().toString(),
-        fullName: fullName.trim(),
-        email: normalizedEmail,
-        jobTitle: jobTitle.trim(),
-        requestedAt: new Date().toISOString(),
-        status: 'pending',
-      };
-
-      addPendingRequest(newRequest);
-
-      // Show success message for request submission
-      Alert.alert(
-        'Request Submitted',
-        'Your account has been created and registration request submitted. Please check your email to verify your account. You will be able to log in once the Site Administrator approves your request.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Clear form
-              setFullName('');
-              setEmail('');
-              setPassword('');
-              setConfirmPassword('');
-              setJobTitle('');
-            },
-          },
-        ]
-      );
-      showSnackbar('Registration request submitted! Check email & await approval.', 'success');
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
-        { text: 'OK' },
-      ]);
-      showSnackbar('An unexpected error occurred.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBackToLogin = () => {
-    if (onBackToLogin) {
-      onBackToLogin();
-    }
-  };
-
+  // Clear error message for a specific field
   const clearError = (field) => {
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
+  // Get color based on notification type (success, error, pending)
   const getSnackbarColor = () => {
     switch (snackbarType) {
       case 'success':
-        return COLORS.success;
+        return COLORS.success;  // Green
       case 'pending':
-        return COLORS.warning;
+        return COLORS.warning;  // Yellow
       default:
-        return COLORS.error;
+        return COLORS.error;    // Red
     }
   };
 
+  // Get icon based on notification type
   const getSnackbarIcon = () => {
     switch (snackbarType) {
       case 'success':

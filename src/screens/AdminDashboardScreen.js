@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {View,ScrollView,TouchableOpacity,Animated,StatusBar,Alert} from 'react-native';
+import {View,ScrollView,TouchableOpacity,Animated,StatusBar} from 'react-native';
 import { Text, Surface } from 'react-native-paper';
 import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
 ChevronRight,RefreshCw,Mail} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getPendingRequests, getApprovedEmails } from './RegisterScreen';
-import { supabase } from '../auth/supabase';
 
 const COLORS = {
   primary: '#0f172a',
@@ -36,6 +35,13 @@ const AdminDashboardScreen = ({
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
+    console.log(' AdminDashboardScreen mounted');
+    console.log(' onLogout prop:', typeof onLogout, onLogout ? 'exists' : 'MISSING');
+    console.log(' userName:', userName);
+    console.log(' userEmail:', userEmail);
+  }, []);
+
+  useEffect(() => {
     loadStats();
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -62,27 +68,15 @@ const AdminDashboardScreen = ({
     setTimeout(() => setRefreshing(false), 500);
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supabase.auth.signOut();
-              if (onLogout) onLogout();
-            } catch (error) {
-              console.error('Logout error:', error);
-              if (onLogout) onLogout();
-            }
-          },
-        },
-      ]
-    );
+  const handleLogout = () => {
+    console.log('👉 Logout button clicked');
+    console.log('📞 onLogout callback:', typeof onLogout);
+    if (onLogout) {
+      console.log('💥 Calling onLogout directly');
+      onLogout();
+    } else {
+      console.log('⚠️ onLogout callback not provided');
+    }
   };
 
   const getInitials = (name) => {
