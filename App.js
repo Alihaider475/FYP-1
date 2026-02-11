@@ -24,7 +24,6 @@ import DetectionScreen from './src/screens/DetectionScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import ViolationDetailScreen from './src/screens/ViolationDetailScreen';
 import SiteSettingsScreen from './src/screens/SiteSettingsScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
 
 // Admin Screens (Admin Only)
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
@@ -182,16 +181,6 @@ const UserStack = ({ userName, userRole, userEmail, onLogout, onRevokeCameraPerm
           {...props}
           userRole={userRole}
           onRevokeCameraPermission={onRevokeCameraPermission}
-        />
-      )}
-    </Stack.Screen>
-    <Stack.Screen name="Profile">
-      {(props) => (
-        <ProfileScreen
-          {...props}
-          userName={userName}
-          userRole={userRole}
-          userEmail={userEmail}
         />
       )}
     </Stack.Screen>
