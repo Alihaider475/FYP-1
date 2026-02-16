@@ -1,8 +1,9 @@
-import React from 'react';
-import {View,ScrollView,TouchableOpacity,StatusBar,Dimensions,} from 'react-native';
+import React, { useEffect } from 'react';
+import {View,ScrollView,TouchableOpacity,StatusBar,Dimensions,Platform,} from 'react-native';
 import {Card,Text,Surface,Avatar,Button,} from 'react-native-paper';
 import {Camera,FileText,Settings,User,LogOut,Shield,AlertTriangle,TrendingUp,Bell,ChevronRight,Scan,
   Activity,CheckCircle,} from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import styles from './styles/DashboardScreenStyles';
 const { width } = Dimensions.get('window');
 
@@ -19,10 +20,61 @@ const COLORS = {
 };
 
 const DashboardScreen = ({ navigation, onLogout, userName = 'Site Manager' }) => {
-  // Navigate to another screen
-  const handleNavigate = (screen) => {
-    if (navigation && navigation.navigate) {
-      navigation.navigate(screen);
+  // Check camera permission when dashboard loads (skip on web)
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        // Skip permission check on web
+        if (Platform.OS === 'web') {
+          return;
+        }
+
+        const { status } = await ImagePicker.getCameraPermissionsAsync();
+        if (status !== 'granted') {
+          // Redirect to camera permission screen if not granted
+          if (navigation && navigation.reset) {
+            navigation.reset({
+              index: 0,
+              routes: [{
+                name: 'CameraPermission',
+                params: { revokedFromSettings: true }
+              }]
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Permission check error:', error);
+        // Continue anyway if permission check fails
+      }
+    };
+
+    checkPermission();
+  }, [navigation]);
+
+  // Navigate to another screen with camera permission check for DetectionScreen
+  const handleNavigate = async (screen) => {
+    try {
+      if (screen === 'Detection' && Platform.OS !== 'web') {
+        // Check camera permission before navigating to detection (skip on web)
+        const { status } = await ImagePicker.getCameraPermissionsAsync();
+        if (status !== 'granted') {
+          // Camera permission not granted, go to permission screen
+          if (navigation && navigation.navigate) {
+            navigation.navigate('CameraPermission', { revokedFromSettings: true });
+          }
+          return;
+        }
+      }
+      
+      if (navigation && navigation.navigate) {
+        navigation.navigate(screen);
+      }
+    } catch (error) {
+      console.warn('Navigation error:', error);
+      // Try to navigate anyway
+      if (navigation && navigation.navigate) {
+        navigation.navigate(screen);
+      }
     }
   };
 

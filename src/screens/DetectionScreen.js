@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {View,StatusBar,TouchableOpacity,Animated,Modal,TextInput} from 'react-native';
+import {View,StatusBar,TouchableOpacity,Animated,Modal,TextInput,Platform,} from 'react-native';
 import {Text,Surface } from 'react-native-paper';
 import {Camera,ArrowLeft,AlertTriangle,Cpu,Radio,Shield,Activity,Play,Scan,Crosshair,Power,MapPin,X,
   Check,} from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { styles, COLORS, CAMERA_HEIGHT } from './styles/DetectionScreenStyles';
 
 const DetectionScreen = ({ navigation, onStopDetection }) => {
@@ -29,6 +30,37 @@ const DetectionScreen = ({ navigation, onStopDetection }) => {
   const glowAnim = useRef(new Animated.Value(0.5)).current;
   const buttonPulseAnim = useRef(new Animated.Value(1)).current;
   const startButtonGlow = useRef(new Animated.Value(0)).current;
+
+  // Check camera permission when screen comes into focus (skip on web)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', async () => {
+      try {
+        // Skip permission check on web
+        if (Platform.OS === 'web') {
+          return;
+        }
+
+        const { status } = await ImagePicker.getCameraPermissionsAsync();
+        if (status !== 'granted') {
+          // Camera permission was revoked, redirect to permission screen
+          if (navigation && navigation.reset) {
+            navigation.reset({
+              index: 0,
+              routes: [{
+                name: 'CameraPermission',
+                params: { revokedFromSettings: true }
+              }]
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Permission check error:', error);
+        // Continue anyway if permission check fails
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   // Button pulse animation when not scanning
   useEffect(() => {

@@ -107,15 +107,26 @@ export const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     marginBottom: 24,
+    gap: 12,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
   },
+  secondaryButton: {
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
   buttonLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.white,
+  },
+  secondaryButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   buttonContent: {
     paddingVertical: 8,

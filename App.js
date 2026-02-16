@@ -201,7 +201,10 @@ export default function App() {
 
   // Listen for Supabase auth state changes
   useEffect(() => {
-    // Check current session on app start
+    // Set loading to false immediately so UI renders
+    setIsLoading(false);
+
+    // Check current session on app start (in background)
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -221,8 +224,6 @@ export default function App() {
         }
       } catch (error) {
         console.error('Error checking session:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -266,8 +267,7 @@ export default function App() {
   useEffect(() => {
     const checkCameraPermission = async () => {
       // Skip camera permission for admin users
-      if (isAuthenticated && !isAdmin(userRole) && !hasCameraPermission) {
-        setIsCheckingPermission(true);
+      if (isAuthenticated && !isAdmin(userRole) && !hasCameraPermission && !revokedFromSettings) {
         try {
           const { status } = await ImagePicker.getCameraPermissionsAsync();
           if (status === 'granted') {
@@ -275,14 +275,12 @@ export default function App() {
           }
         } catch (error) {
           console.error('Error checking camera permission:', error);
-        } finally {
-          setIsCheckingPermission(false);
         }
       }
     };
 
     checkCameraPermission();
-  }, [isAuthenticated, userRole]);
+  }, [isAuthenticated, userRole, hasCameraPermission, revokedFromSettings]);
 
   const handleGetStarted = () => {
     setShowWelcome(false);

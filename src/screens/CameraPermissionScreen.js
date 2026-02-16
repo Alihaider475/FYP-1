@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {View,Animated,Linking} from 'react-native';
+import {View,Animated,Linking,Platform,} from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { Camera, Shield, AlertCircle } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -43,13 +43,34 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
   }, []);
 
   const checkPermissionStatus = async () => {
-    const { status } = await ImagePicker.getCameraPermissionsAsync();
-    setPermissionStatus(status);
+    try {
+      // On web, automatically grant permission
+      if (Platform.OS === 'web') {
+        setPermissionStatus('granted');
+        return;
+      }
+      
+      const { status } = await ImagePicker.getCameraPermissionsAsync();
+      setPermissionStatus(status);
+    } catch (error) {
+      console.warn('Permission check error:', error);
+      // Default to granted on error (for web/unsupported platforms)
+      setPermissionStatus('granted');
+    }
   };
 
   const handleRequestPermission = async () => {
     setIsRequesting(true);
     try {
+      // On web, automatically grant permission
+      if (Platform.OS === 'web') {
+        setPermissionStatus('granted');
+        setTimeout(() => {
+          onPermissionGranted();
+        }, 500);
+        return;
+      }
+
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       setPermissionStatus(status);
 
@@ -61,6 +82,10 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
       }
     } catch (error) {
       console.error('Permission request error:', error);
+      // On error, try to continue anyway
+      setTimeout(() => {
+        onPermissionGranted();
+      }, 500);
     } finally {
       setIsRequesting(false);
     }
@@ -98,7 +123,7 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
 
         {/* Description */}
         <Text style={styles.description}>
-          SafeSite AI needs camera access to detect safety violations and monitor
+          Camera access is REQUIRED to use SafeSite AI. We need camera access to detect safety violations and monitor
           workplace compliance in real-time.
         </Text>
 
@@ -121,9 +146,9 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
         {/* Revoked from Settings Notice */}
         {revokedFromSettings && (
           <View style={styles.warningContainer}>
-            <AlertCircle size={20} color="#f59e0b" />
+            <AlertCircle size={20} color="#ef4444" />
             <Text style={styles.warningText}>
-              Camera access was disabled from settings. Please re-enable camera permission to continue using the app.
+              Camera access was disabled from settings. You must re-enable camera permission to continue using SafeSite AI - this is a mandatory requirement.
             </Text>
           </View>
         )}
@@ -141,9 +166,9 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
         {/* Permission Denied Warning - only show if NOT revoked from settings */}
         {isDenied && !revokedFromSettings && (
           <View style={styles.warningContainer}>
-            <AlertCircle size={20} color="#f59e0b" />
+            <AlertCircle size={20} color="#ef4444" />
             <Text style={styles.warningText}>
-              Camera permission was denied. Please enable it in your device settings to continue.
+              Camera permission is required. You must enable it in your device settings to access SafeSite AI.
             </Text>
           </View>
         )}
@@ -151,7 +176,7 @@ const CameraPermissionScreen = ({ onPermissionGranted, revokedFromSettings = fal
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           {revokedFromSettings ? (
-            // When revoked from settings, always show "Enable Camera Access" button
+            // When revoked from settings, only show enable option
             <Button
               mode="contained"
               onPress={handleRequestPermission}
