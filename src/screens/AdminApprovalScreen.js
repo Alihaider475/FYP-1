@@ -4,8 +4,13 @@ import {Text,Surface,Snackbar} from 'react-native-paper';
 import {Shield,UserCheck,Mail,Users,ArrowLeft,ShieldCheck,Clock,CheckCircle,XCircle,Briefcase,
 Calendar,UserPlus,AlertTriangle,ChevronRight,RefreshCw,} from 'lucide-react-native';
 import { styles, COLORS } from './styles/AdminApprovalScreenStyles';
-import {getPendingRequests,removePendingRequest,addToApproved,getApprovedEmails,addRegisteredUser,getRegisteredUsers,
-} from './RegisterScreen';
+// TODO: Connect to Supabase profiles/approvals tables
+const getPendingRequests = () => [];
+const getApprovedEmails = () => [];
+const getRegisteredUsers = () => [];
+const removePendingRequest = () => {};
+const addToApproved = () => {};
+const addRegisteredUser = () => {};
 
 const AdminApprovalScreen = ({ onBack }) => {
   const [pendingRequests, setPendingRequests] = useState([]);

@@ -108,12 +108,13 @@ const ResetPasswordScreen = ({ email, onPasswordReset, onBackToLogin }) => {
       });
 
       if (error) {
-        if (error.message.includes('same as')) {
+        const msg = error.message || '';
+        if (msg.toLowerCase().includes('same')) {
           setNewPasswordError('New password must be different from your current password');
-        } else if (error.message.includes('session')) {
+        } else if (msg.toLowerCase().includes('session') || msg.toLowerCase().includes('not authenticated')) {
           Alert.alert(
             'Session Expired',
-            'Your password reset link has expired. Please request a new one.',
+            'Your password reset session has expired. Please request a new code.',
             [
               {
                 text: 'OK',
@@ -126,18 +127,24 @@ const ResetPasswordScreen = ({ email, onPasswordReset, onBackToLogin }) => {
             ]
           );
         } else {
-          Alert.alert('Error', error.message, [{ text: 'OK' }]);
+          Alert.alert('Error', msg || 'Failed to update password.', [{ text: 'OK' }]);
         }
         setLoading(false);
         return;
       }
 
-      // Sign out after password reset to require fresh login
-      await supabase.auth.signOut();
+      // Password updated successfully — sign out so user must log in with new password
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {
+        // Sign out is best-effort; don't block the success flow
+      }
+
+      setLoading(false);
 
       Alert.alert(
-        'Password Reset Successful',
-        'Your password has been updated successfully. You can now sign in with your new password.',
+        'Password Changed',
+        'Your password has been updated successfully. Please sign in with your new password.',
         [
           {
             text: 'Sign In',
@@ -147,14 +154,16 @@ const ResetPasswordScreen = ({ email, onPasswordReset, onBackToLogin }) => {
               }
             },
           },
-        ]
+        ],
+        { cancelable: false }
       );
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
-        { text: 'OK' },
-      ]);
-    } finally {
       setLoading(false);
+      Alert.alert(
+        'Error',
+        error.message || 'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }],
+      );
     }
   };
 

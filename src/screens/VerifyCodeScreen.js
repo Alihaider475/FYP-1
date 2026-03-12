@@ -5,9 +5,10 @@ import { Text } from 'react-native-paper';
 import {ArrowLeft,ShieldCheck,RefreshCw,CheckCircle2,} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles, COLORS } from './styles/VerifyCodeStyles';
+import { supabase } from '../auth/supabase';
 
-const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForgotPassword }) => {
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+const VerifyCodeScreen = ({ email, onNavigateToReset, onBackToForgotPassword }) => {
+  const [code, setCode] = useState(['', '', '', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(60);
@@ -67,7 +68,9 @@ const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForg
   };
 
   const handleCodeChange = (text, index) => {
-    const numericText = text.replace(/[^0-9]/g, '');
+    // Convert Eastern Arabic-Indic numerals (٠-٩) to ASCII digits (0-9)
+    const converted = text.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+    const numericText = converted.replace(/[^0-9]/g, '');
 
     if (numericText.length <= 1) {
       const newCode = [...code];
@@ -75,13 +78,13 @@ const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForg
       setCode(newCode);
       setError('');
 
-      if (numericText.length === 1 && index < 5) {
+      if (numericText.length === 1 && index < 7) {
         inputRefs.current[index + 1]?.focus();
       }
 
-      if (numericText.length === 1 && index === 5) {
+      if (numericText.length === 1 && index === 7) {
         const fullCode = newCode.join('');
-        if (fullCode.length === 6) {
+        if (fullCode.length === 8) {
           verifyCode(fullCode);
         }
       }
@@ -98,28 +101,34 @@ const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForg
     setLoading(true);
     setError('');
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: fullCode,
+        type: 'recovery',
+      });
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (fullCode === expectedCode) {
       if (onNavigateToReset) {
         onNavigateToReset({ email });
       }
-    } else {
-      setError('Invalid code. Please check and try again.');
+    } catch (err) {
+      setError(err.message || 'Invalid code. Please check and try again.');
       shakeInputs();
-      setCode(['', '', '', '', '', '']);
+      setCode(['', '', '', '', '', '', '', '']);
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 300);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVerify = () => {
     const fullCode = code.join('');
-    if (fullCode.length !== 6) {
-      setError('Please enter all 6 digits');
+    if (fullCode.length !== 8) {
+      setError('Please enter all 8 digits');
       return;
     }
     verifyCode(fullCode);
@@ -130,16 +139,16 @@ const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForg
 
     setCanResend(false);
     setResendTimer(60);
-    setCode(['', '', '', '', '', '']);
+    setCode(['', '', '', '', '', '', '', '']);
     setError('');
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    Alert.alert(
-      'Code Resent',
-      `A new verification code has been sent to ${email}\n\n(Demo code: ${expectedCode})`,
-      [{ text: 'OK' }]
-    );
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      Alert.alert('Code Resent', `A new verification code has been sent to ${email}`);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to resend code.');
+    }
 
     inputRefs.current[0]?.focus();
   };
@@ -209,7 +218,7 @@ const VerifyCodeScreen = ({ email, expectedCode, onNavigateToReset, onBackToForg
             <View style={styles.headerTextContainer}>
               <Text style={styles.title}>Verify Your Email</Text>
               <Text style={styles.subtitle}>
-                We've sent a 6-digit verification code to{'\n'}
+                We've sent an 8-digit verification code to{'\n'}
                 <Text style={styles.emailHighlight}>{maskedEmail}</Text>
               </Text>
             </View>

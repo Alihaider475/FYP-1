@@ -4,7 +4,9 @@ import { Text, Surface } from 'react-native-paper';
 import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
 ChevronRight,RefreshCw,Mail} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getPendingRequests, getApprovedEmails } from './RegisterScreen';
+// TODO: Connect to Supabase profiles/approvals tables
+const getPendingRequests = () => [];
+const getApprovedEmails = () => [];
 
 const COLORS = {
   primary: '#0f172a',

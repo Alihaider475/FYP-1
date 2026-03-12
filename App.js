@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -32,7 +33,7 @@ import AdminSettingsScreen from './src/screens/AdminSettingsScreen';
 import WhitelistManagerScreen from './src/screens/WhitelistManagerScreen';
 
 // Import User Roles utilities
-import { USER_ROLES, getUserRole, isAdmin } from './src/utils/userRoles';
+import { USER_ROLES, mapDbRole, isAdmin } from './src/utils/userRoles';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,7 +57,7 @@ const theme = {
 };
 
 // Auth Stack - for unauthenticated users
-const AuthStack = ({ onLoginSuccess, onRegisterSuccess }) => (
+const AuthStack = ({ onLoginSuccess, onEnterResetFlow, onExitResetFlow }) => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
@@ -77,7 +78,6 @@ const AuthStack = ({ onLoginSuccess, onRegisterSuccess }) => (
       {(props) => (
         <RegisterScreen
           {...props}
-          onRegisterSuccess={onRegisterSuccess}
           onBackToLogin={() => props.navigation.navigate('Login')}
         />
       )}
@@ -86,8 +86,14 @@ const AuthStack = ({ onLoginSuccess, onRegisterSuccess }) => (
       {(props) => (
         <ForgotPasswordScreen
           {...props}
-          onNavigateToVerify={(data) => props.navigation.navigate('VerifyCode', data)}
-          onBackToLogin={() => props.navigation.navigate('Login')}
+          onNavigateToVerify={(data) => {
+            onEnterResetFlow();
+            props.navigation.navigate('VerifyCode', data);
+          }}
+          onBackToLogin={() => {
+            onExitResetFlow();
+            props.navigation.navigate('Login');
+          }}
         />
       )}
     </Stack.Screen>
@@ -96,7 +102,6 @@ const AuthStack = ({ onLoginSuccess, onRegisterSuccess }) => (
         <VerifyCodeScreen
           {...props}
           email={props.route.params?.email}
-          expectedCode={props.route.params?.code}
           onNavigateToReset={(data) => props.navigation.navigate('ResetPassword', data)}
           onBackToForgotPassword={() => props.navigation.navigate('ForgotPassword')}
         />
@@ -107,8 +112,14 @@ const AuthStack = ({ onLoginSuccess, onRegisterSuccess }) => (
         <ResetPasswordScreen
           {...props}
           email={props.route.params?.email}
-          onPasswordReset={() => props.navigation.navigate('Login')}
-          onBackToLogin={() => props.navigation.navigate('Login')}
+          onPasswordReset={() => {
+            onExitResetFlow();
+            props.navigation.navigate('Login');
+          }}
+          onBackToLogin={() => {
+            onExitResetFlow();
+            props.navigation.navigate('Login');
+          }}
         />
       )}
     </Stack.Screen>
@@ -198,6 +209,7 @@ export default function App() {
   const [userRole, setUserRole] = useState(USER_ROLES.MANAGER);
   const [userEmail, setUserEmail] = useState('');
   const [userId, setUserId] = useState(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Listen for Supabase auth state changes
   useEffect(() => {
@@ -209,9 +221,19 @@ export default function App() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          // If we're in the middle of a password reset flow, don't auto-authenticate
+          if (isResettingPassword) return;
+
           const email = session.user.email || '';
-          const role = getUserRole(email);
-          const name = session.user.user_metadata?.full_name || email.split('@')[0] || 'User';
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, name')
+            .eq('id', session.user.id)
+            .single();
+
+          const role = mapDbRole(profile?.role);
+          const name = profile?.name || email.split('@')[0] || 'User';
 
           setUserId(session.user.id);
           setUserEmail(email);
@@ -234,17 +256,7 @@ export default function App() {
       async (event, session) => {
         console.log('Auth state changed:', event);
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          const email = session.user.email || '';
-          const role = getUserRole(email);
-          const name = session.user.user_metadata?.full_name || email.split('@')[0] || 'User';
-
-          setUserId(session.user.id);
-          setUserEmail(email);
-          setUserRole(role);
-          setUserName(name);
-          setIsAuthenticated(true);
-        } else if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setHasCameraPermission(false);
           setRevokedFromSettings(false);
@@ -252,6 +264,7 @@ export default function App() {
           setUserRole(USER_ROLES.MANAGER);
           setUserEmail('');
           setUserId(null);
+          setIsResettingPassword(false);
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed');
         }
@@ -261,7 +274,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isResettingPassword]);
 
   // Check camera permission when user logs in (only for non-admin users)
   useEffect(() => {
@@ -288,8 +301,8 @@ export default function App() {
 
   const handleLoginSuccess = (userData) => {
     const email = userData?.email || '';
-    const role = userData?.role || getUserRole(email);
-    const name = userData?.email?.split('@')[0] || 'User';
+    const role = userData?.role || USER_ROLES.WORKER;
+    const name = userData?.name || email.split('@')[0] || 'User';
 
     setUserId(userData?.id || null);
     setUserEmail(email);
@@ -298,12 +311,6 @@ export default function App() {
     setIsAuthenticated(true);
 
     console.log(`User logged in: ${email} with role: ${role}`);
-  };
-
-  const handleRegisterSuccess = (userData) => {
-    // After registration, go back to login
-    // User needs to verify email first
-    console.log(`User registered: ${userData?.email}`);
   };
 
   const handleCameraPermissionGranted = () => {
@@ -393,7 +400,8 @@ export default function App() {
           // Auth Screens - for unauthenticated users
           <AuthStack
             onLoginSuccess={handleLoginSuccess}
-            onRegisterSuccess={handleRegisterSuccess}
+            onEnterResetFlow={() => setIsResettingPassword(true)}
+            onExitResetFlow={() => setIsResettingPassword(false)}
           />
         ) : userIsAdmin ? (
           // Admin Screens - ONLY for admin users

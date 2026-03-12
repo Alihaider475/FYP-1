@@ -4,7 +4,7 @@ import {View,KeyboardAvoidingView,Platform,ScrollView,TouchableOpacity,Animated,
 import { TextInput, Text } from 'react-native-paper';
 import {Shield,Eye,EyeOff,Mail,Lock,ArrowRight,Sparkles,} from 'lucide-react-native';
 import { styles, COLORS, LOGIN_COLORS } from './styles/LoginScreenStyles';
-import { getUserRole, getRoleDisplayName } from '../utils/userRoles';
+import { mapDbRole, getRoleDisplayName } from '../utils/userRoles';
 import { supabase } from '../auth/supabase';
 
 const LoginScreen = ({ onLoginSuccess, onNavigateToRegister, onNavigateToForgotPassword }) => {
@@ -87,15 +87,23 @@ const LoginScreen = ({ onLoginSuccess, onNavigateToRegister, onNavigateToForgotP
         return;
       }
 
-      // Login successful
+      // Login successful — fetch role from profiles table
       const userEmail = data.user?.email || email.toLowerCase().trim();
-      const userRole = getUserRole(userEmail);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, name')
+        .eq('id', data.user.id)
+        .single();
+
+      const userRole = mapDbRole(profile?.role);
       const roleName = getRoleDisplayName(userRole);
 
       if (onLoginSuccess) {
         onLoginSuccess({
           id: data.user?.id,
           email: userEmail,
+          name: profile?.name || userEmail.split('@')[0],
           role: userRole,
           roleName: roleName,
           session: data.session,

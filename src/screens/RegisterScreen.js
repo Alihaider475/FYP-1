@@ -5,81 +5,22 @@ import { TextInput, Text, Snackbar } from 'react-native-paper';
 import {Shield,Eye,EyeOff,Mail,Lock,User,ArrowRight,ArrowLeft,UserPlus,ShieldAlert,CheckCircle,Clock,
   Building} from 'lucide-react-native';
 import { styles, COLORS } from './styles/RegisterScreenStyles';
+import { useWorkerSignup } from '../hooks/useWorkerSignup';
 
-// Simulated Database - Approved Users (can register directly)
-export const APPROVED_EMAILS = [
-  'admin@site.com',
-];
-
-// Simulated Database - Pending Registration Requests
-export let PENDING_REQUESTS = [
-  {
-    id: '1',
-    fullName: 'Ali Haider',
-    email: 'ali.haider@company.com',
-    jobTitle: 'Safety Manager',
-    requestedAt: '2024-02-11T10:30:00Z',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    fullName: 'Tariq',
-    email: 'tariq@company.com',
-    jobTitle: 'Site Supervisor',
-    requestedAt: '2024-02-11T11:15:00Z',
-    status: 'pending',
-  },
-];
-
-// Simulated Database - Registered Users (users who completed registration)
-export let REGISTERED_USERS = [];
-
-// Helper functions to manage requests (exported for AdminApprovalScreen)
-export const addPendingRequest = (request) => {
-  PENDING_REQUESTS = [...PENDING_REQUESTS, request];
-};
-
-export const removePendingRequest = (email) => {
-  PENDING_REQUESTS = PENDING_REQUESTS.filter(
-    (req) => req.email.toLowerCase() !== email.toLowerCase()
-  );
-};
-
-export const addToApproved = (email) => {
-  const emailLower = email.toLowerCase();
-  if (!APPROVED_EMAILS.includes(emailLower)) {
-    APPROVED_EMAILS.push(emailLower);
-  }
-};
-
-export const addRegisteredUser = (user) => {
-  const userExists = REGISTERED_USERS.some(
-    (u) => u.email.toLowerCase() === user.email.toLowerCase()
-  );
-  if (!userExists) {
-    REGISTERED_USERS = [...REGISTERED_USERS, { ...user, registeredAt: new Date().toISOString() }];
-  }
-};
-
-export const getPendingRequests = () => PENDING_REQUESTS;
-export const getApprovedEmails = () => APPROVED_EMAILS;
-export const getRegisteredUsers = () => REGISTERED_USERS;
-
-const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
+const RegisterScreen = ({ navigation, onRegisterSuccess, onBackToLogin }) => {
+  const { handleSignup, isLoading, isBlocked } = useWorkerSignup(navigation);
   // Form input states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  const [companyCode, setCompanyCode] = useState('');
   
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Loading state
-  const [loading, setLoading] = useState(false);
-
   // Notification states
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -158,104 +99,6 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
     // Update error state
     setErrors(newErrors);
     return isValid;
-  };
-
-  const handleRegister = () => {
-    // First check if form is valid
-    if (!validateForm()) return;
-
-    // Show loading state
-    setLoading(true);
-
-    // Simulate submission delay (like API call)
-    setTimeout(() => {
-      const normalizedEmail = email.toLowerCase().trim();
-
-      // Check if email is already approved by admin
-      const isApproved = getApprovedEmails().includes(normalizedEmail);
-
-      if (isApproved) {
-        // Email is approved - registration successful!
-        const successUser = {
-          id: Date.now().toString(),
-          fullName: fullName.trim(),
-          email: normalizedEmail,
-          jobTitle: jobTitle.trim(),
-          password: password,
-          status: 'registered',
-        };
-
-        addRegisteredUser(successUser);
-        setLoading(false);
-
-        // Show success - user can now login
-        Alert.alert(
-          'Registration Successful!',
-          `Welcome ${fullName}! Your account has been created.\n\nYou can now login to SafeSite AI.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Clear all form fields
-                setFullName('');
-                setEmail('');
-                setPassword('');
-                setConfirmPassword('');
-                setJobTitle('');
-                
-                // Go back to login screen
-                if (onBackToLogin) {
-                  onBackToLogin();
-                }
-              },
-            },
-          ]
-        );
-
-        // Show success notification
-        showSnackbar('Account created successfully! You can now login.', 'success');
-      } else {
-        // Email not approved yet - add to pending requests
-        const newRequest = {
-          id: Date.now().toString(),
-          fullName: fullName.trim(),
-          email: normalizedEmail,
-          jobTitle: jobTitle.trim(),
-          requestedAt: '2024-02-11T12:00:00Z',
-          status: 'pending',
-        };
-
-        addPendingRequest(newRequest);
-        setLoading(false);
-
-        // Show pending message
-        Alert.alert(
-          'Registration Submitted',
-          `Hi ${fullName}, your registration request has been submitted.\n\nPlease wait for admin approval.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Clear all form fields
-                setFullName('');
-                setEmail('');
-                setPassword('');
-                setConfirmPassword('');
-                setJobTitle('');
-                
-                // Go back to login screen
-                if (onBackToLogin) {
-                  onBackToLogin();
-                }
-              },
-            },
-          ]
-        );
-
-        // Show pending notification
-        showSnackbar('Registration request submitted. Waiting for admin approval.', 'pending');
-      }
-    }, 500);
   };
 
   const handleBackToLogin = () => {
@@ -431,6 +274,29 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
                 ) : null}
               </View>
 
+              {/* Company Code Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Company Code</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.inputIcon}>
+                    <Shield size={20} color={COLORS.secondary} />
+                  </View>
+                  <TextInput
+                    value={companyCode}
+                    onChangeText={(text) => setCompanyCode(text)}
+                    mode="flat"
+                    placeholder="Enter your company code"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={styles.input}
+                    underlineColor="transparent"
+                    activeUnderlineColor="transparent"
+                    textColor={COLORS.primary}
+                    placeholderTextColor={COLORS.secondary}
+                  />
+                </View>
+              </View>
+
               {/* Password Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
@@ -512,12 +378,12 @@ const RegisterScreen = ({ onRegisterSuccess, onBackToLogin }) => {
 
               {/* Submit Request Button */}
               <TouchableOpacity
-                style={[styles.signUpButton, loading && styles.signUpButtonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
+                style={[styles.signUpButton, (isLoading || isBlocked) && styles.signUpButtonDisabled]}
+                onPress={() => handleSignup({ name: fullName, email, password, designation: jobTitle, company_code: companyCode })}
+                disabled={isLoading || isBlocked}
                 activeOpacity={0.8}
               >
-                {loading ? (
+                {isLoading ? (
                   <Text style={styles.signUpButtonText}>Submitting Request...</Text>
                 ) : (
                   <>

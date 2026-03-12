@@ -13,6 +13,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: {
+    fetch: fetch.bind(globalThis),
+  },
 })
 
 // Tells Supabase Auth to continuously refresh the session automatically

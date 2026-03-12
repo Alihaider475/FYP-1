@@ -44,10 +44,6 @@ const ForgotPasswordScreen = ({ onNavigateToVerify, onBackToLogin }) => {
     return emailRegex.test(email);
   };
 
-  const generateVerificationCode = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
-
   const handleSendCode = async () => {
     setEmailError('');
 
@@ -64,21 +60,19 @@ const ForgotPasswordScreen = ({ onNavigateToVerify, onBackToLogin }) => {
     setLoading(true);
 
     try {
-      // Generate 6-digit verification code
-      const verificationCode = generateVerificationCode();
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.toLowerCase().trim()
+      );
 
-      // TODO: Send verification code to email using email service
-      // For now, we'll navigate to verify screen with the code
-      // In production, you should send this code via email first
+      if (error) throw error;
 
       if (onNavigateToVerify) {
         onNavigateToVerify({
           email: email.toLowerCase().trim(),
-          code: verificationCode,
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.', [
+      Alert.alert('Error', error.message || 'An unexpected error occurred. Please try again.', [
         { text: 'OK' },
       ]);
     } finally {
