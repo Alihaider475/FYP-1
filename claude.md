@@ -1,27 +1,28 @@
-# Project: SafeSite AI (Phase 2)
-# Task: Forgot Password & Password Reset Logic (OTP Flow)
+# 🏗️ Project: SafeSite AI 
+# 🚀 Task: The "Kill Switch" (Manager Suspension System)
 
 ## 🎯 Objective
-You are an expert React Native (Expo) and Supabase Developer. I have already built the UI for the "Forgot Password" screen. Your task is to provide the backend logic using a custom hook.
+You are an expert React Native (Expo) and Supabase Developer. My RBAC (Role-Based Access Control) is working. Now, I need to build a "Kill Switch" for the Super Admin. The Super Admin should be able to instantly suspend a 'manager'. If a manager is suspended, they should be immediately logged out and blocked from logging in again.
 
-## 📋 The Required Workflow (OTP Flow for Mobile)
-Since deep linking can be complex in Expo, we will use the Supabase OTP flow for password recovery. The hook needs to support two distinct actions:
+## 🗄️ Database Schema Update Required
+Assume the `profiles` table in Supabase needs a new column:
+- `is_suspended` (boolean, default: false)
 
-**Action 1: Send Reset OTP**
-1. User provides their `email`.
-2. Validate the email format.
-3. Call `supabase.auth.resetPasswordForEmail(email)`.
-4. If successful, alert the user to check their email for a 6-digit OTP code and transition the UI state to the OTP verification step.
+## 🧩 The Workflow to Implement
 
-**Action 2: Verify OTP and Update Password**
-1. User provides the `email`, the 6-digit `otp` they received, and their `newPassword`.
-2. Call `supabase.auth.verifyOtp({ email, token: otp, type: 'recovery' })` to verify the code and create a secure session.
-3. IMMEDIATELY after successful verification, call `supabase.auth.updateUser({ password: newPassword })` to set the new password.
-4. If successful, alert the user "Password updated successfully" and navigate them back to the Login screen.
+**Part 1: The Admin Controls (UI & Logic)**
+1. Write a custom hook `useManagerControl.js`.
+2. It should fetch all users from the `profiles` table where `role === 'manager'`.
+3. It must have a function `toggleSuspension(managerId, currentStatus)` that updates the `is_suspended` boolean in the Supabase database.
+4. Provide the boilerplate React Native code for `ManagerControlScreen.js` (FlatList) to display the managers and a "Suspend / Reactivate" button to trigger the hook.
 
-## 🛠️ Requirements for Claude
-* Write a custom React Native hook called `useForgotPassword.js`.
-* It should return state variables: `isLoading` (boolean) and `step` (number: 1 for Email input, 2 for OTP/New Password input).
-* It should return two functions: `sendResetEmail(email)` and `updatePassword(email, otp, newPassword)`.
-* Wrap all Supabase calls in `try-catch` blocks and use `Alert.alert` for error handling (e.g., "Email not found", "Invalid OTP").
-* **Do NOT write UI components.** I will connect this hook to my existing TextInputs and Buttons. Just provide the complete hook logic.
+**Part 2: The Enforcement (The Actual "Kill")**
+This is the most critical part. The system must enforce the suspension.
+1. Update my Auth logic (provide the code for `AuthContext.js` or the main route guard).
+2. When fetching the user's session and profile on app load, check the `is_suspended` flag.
+3. If `is_suspended === true`, forcefully call `supabase.auth.signOut()`, clear local storage, and show an Alert: "Account Suspended. Contact Administration."
+
+## ⚠️ Strict Development Rules
+1. Do not overwrite my existing UI styles. Keep the UI simple so I can style it later.
+2. Focus heavily on **Part 2 (The Enforcement)**. The Kill Switch is useless if the manager remains logged in after the database is updated.
+3. Wrap all Supabase calls in `try-catch` blocks.

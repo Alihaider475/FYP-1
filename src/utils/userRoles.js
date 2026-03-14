@@ -7,6 +7,7 @@ export const USER_ROLES = {
 // Map database role string to app constant
 export const mapDbRole = (dbRole) => {
   switch (dbRole?.toLowerCase()) {
+    case 'super_admin':
     case 'admin':
       return USER_ROLES.ADMIN;
     case 'manager':
@@ -14,7 +15,7 @@ export const mapDbRole = (dbRole) => {
     case 'worker':
       return USER_ROLES.WORKER;
     default:
-      return USER_ROLES.WORKER;
+      return null;
   }
 };
 

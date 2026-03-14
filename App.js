@@ -7,9 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { View, ActivityIndicator } from 'react-native';
 
-// Import Supabase client
-import { supabase } from './src/auth/supabase';
-
 // Import Screens
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -19,21 +16,26 @@ import VerifyCodeScreen from './src/screens/VerifyCodeScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import CameraPermissionScreen from './src/screens/CameraPermissionScreen';
 
-// User Screens (Normal Users Only)
+// User Screens
 import DashboardScreen from './src/screens/DashboardScreen';
 import DetectionScreen from './src/screens/DetectionScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import ViolationDetailScreen from './src/screens/ViolationDetailScreen';
 import SiteSettingsScreen from './src/screens/SiteSettingsScreen';
 
-// Admin Screens (Admin Only)
+// Admin Screens
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import AdminApprovalScreen from './src/screens/AdminApprovalScreen';
 import AdminSettingsScreen from './src/screens/AdminSettingsScreen';
 import WhitelistManagerScreen from './src/screens/WhitelistManagerScreen';
+import CompanyManagerScreen from './src/screens/CompanyManagerScreen';
+import GlobalSettingsScreen from './src/screens/GlobalSettingsScreen';
+import AdminAnalyticsScreen from './src/screens/AdminAnalyticsScreen';
+import ManagerControlScreen from './src/screens/ManagerControlScreen';
 
-// Import User Roles utilities
-import { USER_ROLES, mapDbRole, isAdmin } from './src/utils/userRoles';
+// Import User Roles utilities and Auth Hook
+import { USER_ROLES, isAdmin, isManager, isWorker } from './src/utils/userRoles';
+import useAuthRoute from './src/hooks/useAuthRoute';
 
 const Stack = createNativeStackNavigator();
 
@@ -126,7 +128,7 @@ const AuthStack = ({ onLoginSuccess, onEnterResetFlow, onExitResetFlow }) => (
   </Stack.Navigator>
 );
 
-// Admin Stack - ONLY for admin users
+// Admin Stack - ONLY for super_admin users
 const AdminStack = ({ userName, userEmail, onLogout }) => (
   <Stack.Navigator
     screenOptions={{
@@ -153,6 +155,38 @@ const AdminStack = ({ userName, userEmail, onLogout }) => (
       )}
     </Stack.Screen>
     <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+    <Stack.Screen name="CompanyManager">
+      {(props) => (
+        <CompanyManagerScreen
+          {...props}
+          onBack={() => props.navigation.goBack()}
+        />
+      )}
+    </Stack.Screen>
+    <Stack.Screen name="GlobalSettings">
+      {(props) => (
+        <GlobalSettingsScreen
+          {...props}
+          onBack={() => props.navigation.goBack()}
+        />
+      )}
+    </Stack.Screen>
+    <Stack.Screen name="AdminAnalytics">
+      {(props) => (
+        <AdminAnalyticsScreen
+          {...props}
+          onBack={() => props.navigation.goBack()}
+        />
+      )}
+    </Stack.Screen>
+    <Stack.Screen name="ManagerControl">
+      {(props) => (
+        <ManagerControlScreen
+          {...props}
+          onBack={() => props.navigation.goBack()}
+        />
+      )}
+    </Stack.Screen>
     <Stack.Screen name="WhitelistManager">
       {(props) => (
         <WhitelistManagerScreen
@@ -164,8 +198,8 @@ const AdminStack = ({ userName, userEmail, onLogout }) => (
   </Stack.Navigator>
 );
 
-// User Stack - ONLY for normal users (managers)
-const UserStack = ({ userName, userRole, userEmail, onLogout, onRevokeCameraPermission }) => (
+// Manager Stack - ONLY for manager users (full access: Detection, Settings)
+const ManagerStack = ({ userName, userRole, userEmail, onLogout, onRevokeCameraPermission }) => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
@@ -198,89 +232,62 @@ const UserStack = ({ userName, userRole, userEmail, onLogout, onRevokeCameraPerm
   </Stack.Navigator>
 );
 
+// Worker Stack - ONLY for worker users (limited: Dashboard, History, ViolationDetail)
+const WorkerStack = ({ userName, userRole, userEmail, onLogout }) => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'slide_from_right',
+    }}
+  >
+    <Stack.Screen name="Dashboard">
+      {(props) => (
+        <DashboardScreen
+          {...props}
+          userName={userName}
+          userRole={userRole}
+          userEmail={userEmail}
+          onLogout={onLogout}
+        />
+      )}
+    </Stack.Screen>
+    <Stack.Screen name="History" component={HistoryScreen} />
+    <Stack.Screen name="ViolationDetail" component={ViolationDetailScreen} />
+  </Stack.Navigator>
+);
+
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   const [revokedFromSettings, setRevokedFromSettings] = useState(false);
-  const [userName, setUserName] = useState('Site Manager');
-  const [userRole, setUserRole] = useState(USER_ROLES.MANAGER);
-  const [userEmail, setUserEmail] = useState('');
-  const [userId, setUserId] = useState(null);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  // Listen for Supabase auth state changes
+  const {
+    isLoading,
+    isAuthenticated,
+    userRole,
+    userName,
+    userEmail,
+    userId,
+    isResettingPassword,
+    handleLoginSuccess,
+    handleLogout,
+    enterResetFlow,
+    exitResetFlow,
+  } = useAuthRoute();
+
+  // Reset camera state on logout
   useEffect(() => {
-    // Set loading to false immediately so UI renders
-    setIsLoading(false);
+    if (!isAuthenticated) {
+      setHasCameraPermission(false);
+      setRevokedFromSettings(false);
+    }
+  }, [isAuthenticated]);
 
-    // Check current session on app start (in background)
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          // If we're in the middle of a password reset flow, don't auto-authenticate
-          if (isResettingPassword) return;
-
-          const email = session.user.email || '';
-
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role, name')
-            .eq('id', session.user.id)
-            .single();
-
-          const role = mapDbRole(profile?.role);
-          const name = profile?.name || email.split('@')[0] || 'User';
-
-          setUserId(session.user.id);
-          setUserEmail(email);
-          setUserRole(role);
-          setUserName(name);
-          setIsAuthenticated(true);
-          setShowWelcome(false);
-
-          console.log(`Session restored: ${email} with role: ${role}`);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-
-        if (event === 'SIGNED_OUT') {
-          setIsAuthenticated(false);
-          setHasCameraPermission(false);
-          setRevokedFromSettings(false);
-          setUserName('Site Manager');
-          setUserRole(USER_ROLES.MANAGER);
-          setUserEmail('');
-          setUserId(null);
-          setIsResettingPassword(false);
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed');
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [isResettingPassword]);
-
-  // Check camera permission when user logs in (only for non-admin users)
+  // Check camera permission when user logs in (only for manager users)
   useEffect(() => {
     const checkCameraPermission = async () => {
-      // Skip camera permission for admin users
-      if (isAuthenticated && !isAdmin(userRole) && !hasCameraPermission && !revokedFromSettings) {
+      if (isAuthenticated && isManager(userRole) && !hasCameraPermission && !revokedFromSettings) {
         try {
           const { status } = await ImagePicker.getCameraPermissionsAsync();
           if (status === 'granted') {
@@ -299,20 +306,6 @@ export default function App() {
     setShowWelcome(false);
   };
 
-  const handleLoginSuccess = (userData) => {
-    const email = userData?.email || '';
-    const role = userData?.role || USER_ROLES.WORKER;
-    const name = userData?.name || email.split('@')[0] || 'User';
-
-    setUserId(userData?.id || null);
-    setUserEmail(email);
-    setUserRole(role);
-    setUserName(name);
-    setIsAuthenticated(true);
-
-    console.log(`User logged in: ${email} with role: ${role}`);
-  };
-
   const handleCameraPermissionGranted = () => {
     setHasCameraPermission(true);
     setRevokedFromSettings(false);
@@ -321,28 +314,6 @@ export default function App() {
   const handleRevokeCameraPermission = () => {
     setHasCameraPermission(false);
     setRevokedFromSettings(true);
-  };
-
-  const handleLogout = async () => {
-    console.log('🔴 Logout triggered');
-    try {
-      await supabase.auth.signOut();
-      console.log(' Supabase sign-out successful');
-    } catch (error) {
-      console.error(' Logout error:', error);
-    }
-    
-    // Reset all state - this will trigger a re-render and switch from AdminStack to AuthStack
-    console.log(' Resetting auth state');
-    setIsAuthenticated(false);
-    setHasCameraPermission(false);
-    setRevokedFromSettings(false);
-    setUserName('Site Manager');
-    setUserRole(USER_ROLES.MANAGER);
-    setUserEmail('');
-    setUserId(null);
-    setShowWelcome(false);
-    console.log(' Auth state reset complete');
   };
 
   // Show loading screen while checking session
@@ -366,21 +337,16 @@ export default function App() {
     );
   }
 
-  // Check if user is admin
-  const userIsAdmin = isAdmin(userRole);
-  
   // Debug logging
-  console.log('🔵 App State:', {
+  console.log('App State:', {
     isAuthenticated,
     userRole,
-    userIsAdmin,
     userName,
     userEmail,
   });
 
-  // Show Camera Permission Screen after login but before dashboard
-  // ONLY for normal users, NOT for admins
-  if (isAuthenticated && !userIsAdmin && !hasCameraPermission && !isCheckingPermission) {
+  // Show Camera Permission Screen after login for managers only
+  if (isAuthenticated && isManager(userRole) && !hasCameraPermission && !isCheckingPermission) {
     return (
       <PaperProvider theme={theme}>
         <StatusBar style="light" />
@@ -397,27 +363,31 @@ export default function App() {
       <StatusBar style="auto" />
       <NavigationContainer>
         {!isAuthenticated ? (
-          // Auth Screens - for unauthenticated users
           <AuthStack
             onLoginSuccess={handleLoginSuccess}
-            onEnterResetFlow={() => setIsResettingPassword(true)}
-            onExitResetFlow={() => setIsResettingPassword(false)}
+            onEnterResetFlow={enterResetFlow}
+            onExitResetFlow={exitResetFlow}
           />
-        ) : userIsAdmin ? (
-          // Admin Screens - ONLY for admin users
+        ) : isAdmin(userRole) ? (
           <AdminStack
             userName={userName}
             userEmail={userEmail}
             onLogout={handleLogout}
           />
-        ) : (
-          // User Screens - ONLY for normal users (managers)
-          <UserStack
+        ) : isManager(userRole) ? (
+          <ManagerStack
             userName={userName}
             userRole={userRole}
             userEmail={userEmail}
             onLogout={handleLogout}
             onRevokeCameraPermission={handleRevokeCameraPermission}
+          />
+        ) : (
+          <WorkerStack
+            userName={userName}
+            userRole={userRole}
+            userEmail={userEmail}
+            onLogout={handleLogout}
           />
         )}
       </NavigationContainer>

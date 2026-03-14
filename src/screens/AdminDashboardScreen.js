@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {View,ScrollView,TouchableOpacity,Animated,StatusBar} from 'react-native';
 import { Text, Surface } from 'react-native-paper';
 import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
-ChevronRight,RefreshCw,Mail} from 'lucide-react-native';
+ChevronRight,RefreshCw,Mail,Building2,Settings,BarChart3,ShieldOff} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 // TODO: Connect to Supabase profiles/approvals tables
 const getPendingRequests = () => [];
@@ -111,6 +111,42 @@ const AdminDashboardScreen = ({
       bgColor: 'rgba(59, 130, 246, 0.1)',
       badge: approvedCount,
       onPress: () => navigation.navigate('AdminApproval'),
+    },
+    {
+      id: 'companies',
+      title: 'Company & Sites',
+      subtitle: 'Generate codes & manage sites',
+      icon: Building2,
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      onPress: () => navigation.navigate('CompanyManager'),
+    },
+    {
+      id: 'settings',
+      title: 'Global Settings',
+      subtitle: 'Configure warnings & penalties',
+      icon: Settings,
+      color: '#8b5cf6',
+      bgColor: 'rgba(139, 92, 246, 0.1)',
+      onPress: () => navigation.navigate('GlobalSettings'),
+    },
+    {
+      id: 'analytics',
+      title: 'System Analytics',
+      subtitle: 'Fines, violations & stats',
+      icon: BarChart3,
+      color: '#06b6d4',
+      bgColor: 'rgba(6, 182, 212, 0.1)',
+      onPress: () => navigation.navigate('AdminAnalytics'),
+    },
+    {
+      id: 'killswitch',
+      title: 'Manager Control',
+      subtitle: 'Suspend or reactivate managers',
+      icon: ShieldOff,
+      color: '#ef4444',
+      bgColor: 'rgba(239, 68, 68, 0.1)',
+      onPress: () => navigation.navigate('ManagerControl'),
     },
     {
       id: 'whitelist',
