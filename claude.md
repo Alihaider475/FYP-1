@@ -1,28 +1,29 @@
-# 🏗️ Project: SafeSite AI 
-# 🚀 Task: The "Kill Switch" (Manager Suspension System)
+# 🏗️ Project: SafeSite AI (Phase 2)
+# 📊 Task: Integrate Real Data into System Analytics UI
 
 ## 🎯 Objective
-You are an expert React Native (Expo) and Supabase Developer. My RBAC (Role-Based Access Control) is working. Now, I need to build a "Kill Switch" for the Super Admin. The Super Admin should be able to instantly suspend a 'manager'. If a manager is suspended, they should be immediately logged out and blocked from logging in again.
+I have already built the UI for the "System Analytics" dashboard. It currently has hardcoded values (like PKR 0, 1 Manager, 0 Workers, N/A violations). 
+Your task is to write the backend logic (Custom Hook) to fetch real data from Supabase and map those variables into my existing UI component.
 
-## 🗄️ Database Schema Update Required
-Assume the `profiles` table in Supabase needs a new column:
-- `is_suspended` (boolean, default: false)
+## 🗄️ Database Schema Context
+- `profiles` table: Has a `role` column ('manager', 'worker', 'super_admin').
+- `violation_logs` table: Has `fine_amount` (int) and `violation_type` (text).
 
-## 🧩 The Workflow to Implement
+## 🧩 Part 1: The Logic (`hooks/useAdminAnalytics.js`)
+Write a custom React Native hook that calculates the following metrics:
+1. `totalFines`: Sum of `fine_amount` from all rows in `violation_logs`.
+2. `managerCount`: Count of rows in `profiles` where `role === 'manager'`.
+3. `workerCount`: Count of rows in `profiles` where `role === 'worker'`.
+4. `topViolation`: The `violation_type` string that appears most frequently in `violation_logs`.
+5. `isLoading`: Boolean for loading state.
 
-**Part 1: The Admin Controls (UI & Logic)**
-1. Write a custom hook `useManagerControl.js`.
-2. It should fetch all users from the `profiles` table where `role === 'manager'`.
-3. It must have a function `toggleSuspension(managerId, currentStatus)` that updates the `is_suspended` boolean in the Supabase database.
-4. Provide the boilerplate React Native code for `ManagerControlScreen.js` (FlatList) to display the managers and a "Suspend / Reactivate" button to trigger the hook.
+*Important:* Use `useFocusEffect` (from React Navigation) or a `refresh` function so the data updates every time the Admin visits this screen. Wrap Supabase calls in `try-catch`.
 
-**Part 2: The Enforcement (The Actual "Kill")**
-This is the most critical part. The system must enforce the suspension.
-1. Update my Auth logic (provide the code for `AuthContext.js` or the main route guard).
-2. When fetching the user's session and profile on app load, check the `is_suspended` flag.
-3. If `is_suspended === true`, forcefully call `supabase.auth.signOut()`, clear local storage, and show an Alert: "Account Suspended. Contact Administration."
-
-## ⚠️ Strict Development Rules
-1. Do not overwrite my existing UI styles. Keep the UI simple so I can style it later.
-2. Focus heavily on **Part 2 (The Enforcement)**. The Kill Switch is useless if the manager remains logged in after the database is updated.
-3. Wrap all Supabase calls in `try-catch` blocks.
+## 🎨 Part 2: UI Integration (`screens/SystemAnalyticsScreen.js`)
+1. Import `useAdminAnalytics` into my analytics screen.
+2. **DO NOT change my layout, View structures, or styling.** 3. Only replace the hardcoded text strings in my UI with the dynamic variables from the hook. 
+   - Replace "0" next to PKR with `{totalFines}`.
+   - Replace "1" under Managers with `{managerCount}`.
+   - Replace "0" under Workers with `{workerCount}`.
+   - Replace "N/A" with `{topViolation || 'No violations yet'}`.
+4. If `isLoading` is true, you can wrap the numbers in a simple `<ActivityIndicator />` or just show "..." temporarily.

@@ -1,12 +1,37 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {View,ScrollView,TouchableOpacity,Animated,StatusBar} from 'react-native';
-import { Text, Surface } from 'react-native-paper';
-import {Shield,ShieldCheck,Users,UserCheck,UserX,Clock,LogOut,Bell,Activity,TrendingUp,AlertTriangle,
-ChevronRight,RefreshCw,Mail,Building2,Settings,BarChart3,ShieldOff} from 'lucide-react-native';
+import React, { useRef, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+  StatusBar,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { Text } from 'react-native-paper';
+import {
+  ShieldCheck,
+  Users,
+  UserCheck,
+  Clock,
+  LogOut,
+  Activity,
+  AlertTriangle,
+  ChevronRight,
+  RefreshCw,
+  Mail,
+  Building2,
+  Settings,
+  BarChart3,
+  ShieldOff,
+  Zap,
+  DollarSign,
+  HardHat,
+  MapPin,
+  UserPlus,
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-// TODO: Connect to Supabase profiles/approvals tables
-const getPendingRequests = () => [];
-const getApprovedEmails = () => [];
+import useAdminDashboard from '../hooks/useAdminDashboard';
 
 const COLORS = {
   primary: '#0f172a',
@@ -23,72 +48,118 @@ const COLORS = {
   gradient2: '#334155',
 };
 
-const AdminDashboardScreen = ({
-  navigation,
-  userName,
-  userEmail,
-  onLogout
-}) => {
-  const [pendingCount, setPendingCount] = useState(0);
-  const [approvedCount, setApprovedCount] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+// ─── Animated Counter ───
+const AnimatedCounter = ({ value, style, prefix = '', suffix = '' }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = React.useState(0);
 
   useEffect(() => {
-    console.log(' AdminDashboardScreen mounted');
-    console.log(' onLogout prop:', typeof onLogout, onLogout ? 'exists' : 'MISSING');
-    console.log(' userName:', userName);
-    console.log(' userEmail:', userEmail);
-  }, []);
+    animValue.setValue(0);
+    const listener = animValue.addListener(({ value: v }) => setDisplay(Math.round(v)));
+    Animated.timing(animValue, {
+      toValue: value,
+      duration: 1000,
+      useNativeDriver: false,
+    }).start();
+    return () => animValue.removeListener(listener);
+  }, [value]);
+
+  return (
+    <Text style={style}>
+      {prefix}{display.toLocaleString()}{suffix}
+    </Text>
+  );
+};
+
+// ─── Helpers ───
+const formatTimeAgo = (dateString) => {
+  if (!dateString) return '';
+  const diff = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateString).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' });
+};
+
+const getInitials = (name) => {
+  if (!name) return 'AD';
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
+const ACTIVITY_CONFIG = {
+  violation: { icon: AlertTriangle, color: COLORS.error, bg: 'rgba(239, 68, 68, 0.1)' },
+  user_approved: { icon: UserCheck, color: COLORS.success, bg: 'rgba(34, 197, 94, 0.1)' },
+  user_pending: { icon: UserPlus, color: COLORS.warning, bg: 'rgba(245, 158, 11, 0.1)' },
+};
+
+// ─── Main Screen ───
+const AdminDashboardScreen = ({ navigation, userName, userEmail, onLogout }) => {
+  const { stats, recentActivity, isLoading, fetchDashboard } = useAdminDashboard();
+
+  // Staggered menu animations
+  const menuAnims = useRef(
+    Array.from({ length: 7 }, () => ({
+      opacity: new Animated.Value(0),
+      translateY: new Animated.Value(30),
+    }))
+  ).current;
+
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  const snapshotAnim = useRef(new Animated.Value(0)).current;
+  const feedAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    loadStats();
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+    if (!isLoading) {
+      // Header fade in
+      Animated.timing(headerAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+
+      // Snapshot row
+      Animated.timing(snapshotAnim, {
         toValue: 1,
         duration: 500,
+        delay: 200,
         useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
+      }).start();
+
+      // Staggered menu items
+      const menuAnimations = menuAnims.map((anim, i) =>
+        Animated.parallel([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 400,
+            delay: 300 + i * 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.translateY, {
+            toValue: 0,
+            duration: 400,
+            delay: 300 + i * 100,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      Animated.parallel(menuAnimations).start();
+
+      // Activity feed
+      Animated.timing(feedAnim, {
+        toValue: 1,
         duration: 500,
+        delay: 300 + 7 * 100,
         useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const loadStats = () => {
-    setPendingCount(getPendingRequests().length);
-    setApprovedCount(getApprovedEmails().length);
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadStats();
-    setTimeout(() => setRefreshing(false), 500);
-  };
+      }).start();
+    }
+  }, [isLoading]);
 
   const handleLogout = () => {
-    console.log('👉 Logout button clicked');
-    console.log('📞 onLogout callback:', typeof onLogout);
-    if (onLogout) {
-      console.log('💥 Calling onLogout directly');
-      onLogout();
-    } else {
-      console.log('⚠️ onLogout callback not provided');
-    }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'AD';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    if (onLogout) onLogout();
   };
 
   const menuItems = [
@@ -99,7 +170,7 @@ const AdminDashboardScreen = ({
       icon: UserCheck,
       color: '#22c55e',
       bgColor: 'rgba(34, 197, 94, 0.1)',
-      badge: pendingCount > 0 ? pendingCount : null,
+      badge: stats.pendingCount > 0 ? stats.pendingCount : null,
       onPress: () => navigation.navigate('AdminApproval'),
     },
     {
@@ -109,7 +180,7 @@ const AdminDashboardScreen = ({
       icon: Users,
       color: '#3b82f6',
       bgColor: 'rgba(59, 130, 246, 0.1)',
-      badge: approvedCount,
+      badge: stats.totalUsers > 0 ? stats.totalUsers : null,
       onPress: () => navigation.navigate('AdminApproval'),
     },
     {
@@ -119,6 +190,7 @@ const AdminDashboardScreen = ({
       icon: Building2,
       color: '#f59e0b',
       bgColor: 'rgba(245, 158, 11, 0.1)',
+      badge: stats.activeSites > 0 ? stats.activeSites : null,
       onPress: () => navigation.navigate('CompanyManager'),
     },
     {
@@ -159,22 +231,28 @@ const AdminDashboardScreen = ({
     },
   ];
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={{ color: COLORS.muted, marginTop: 12, fontSize: 14 }}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.gradient1} />
 
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.gradient1, COLORS.gradient2]}
-        style={styles.header}
-      >
+      <LinearGradient colors={[COLORS.gradient1, COLORS.gradient2]} style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.adminBadge}>
             <ShieldCheck size={14} color={COLORS.surface} />
             <Text style={styles.adminBadgeText}>ADMIN PANEL</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerButton} onPress={handleRefresh}>
+            <TouchableOpacity style={styles.headerButton} onPress={fetchDashboard}>
               <RefreshCw size={20} color={COLORS.surface} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerButton} onPress={handleLogout}>
@@ -194,27 +272,27 @@ const AdminDashboardScreen = ({
           </View>
         </View>
 
-        {/* Stats Cards */}
+        {/* Live Stats Cards */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: 'rgba(251, 191, 36, 0.2)' }]}>
               <Clock size={20} color="#fbbf24" />
             </View>
-            <Text style={styles.statNumber}>{pendingCount}</Text>
+            <AnimatedCounter value={stats.pendingCount} style={styles.statNumber} />
             <Text style={styles.statLabel}>Pending</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }]}>
               <UserCheck size={20} color="#22c55e" />
             </View>
-            <Text style={styles.statNumber}>{approvedCount}</Text>
+            <AnimatedCounter value={stats.approvedCount} style={styles.statNumber} />
             <Text style={styles.statLabel}>Approved</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
               <Activity size={20} color="#3b82f6" />
             </View>
-            <Text style={styles.statNumber}>{pendingCount + approvedCount}</Text>
+            <AnimatedCounter value={stats.totalUsers} style={styles.statNumber} />
             <Text style={styles.statLabel}>Total</Text>
           </View>
         </View>
@@ -225,42 +303,88 @@ const AdminDashboardScreen = ({
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={fetchDashboard} colors={[COLORS.accent]} />
+        }
       >
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }}
-        >
-          {/* Alert Banner */}
-          {pendingCount > 0 && (
-            <TouchableOpacity
-              style={styles.alertBanner}
-              onPress={() => navigation.navigate('AdminApproval')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.alertIcon}>
-                <AlertTriangle size={20} color="#f59e0b" />
+        {/* Today's Snapshot */}
+        <Animated.View style={{ opacity: snapshotAnim }}>
+          <View style={styles.snapshotContainer}>
+            <View style={styles.snapshotHeader}>
+              <Zap size={16} color={COLORS.accent} />
+              <Text style={styles.snapshotTitle}>Today's Snapshot</Text>
+            </View>
+            <View style={styles.snapshotRow}>
+              <View style={styles.snapshotItem}>
+                <View style={[styles.snapshotIcon, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                  <AlertTriangle size={16} color={COLORS.error} />
+                </View>
+                <AnimatedCounter value={stats.todayViolations} style={styles.snapshotValue} />
+                <Text style={styles.snapshotLabel}>Violations</Text>
               </View>
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>
-                  {pendingCount} Pending Approval{pendingCount > 1 ? 's' : ''}
-                </Text>
-                <Text style={styles.alertSubtitle}>Tap to review requests</Text>
+              <View style={styles.snapshotDivider} />
+              <View style={styles.snapshotItem}>
+                <View style={[styles.snapshotIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                  <DollarSign size={16} color={COLORS.warning} />
+                </View>
+                <AnimatedCounter value={stats.todayFines} style={styles.snapshotValue} prefix="PKR " />
+                <Text style={styles.snapshotLabel}>Fines</Text>
               </View>
-              <ChevronRight size={20} color={COLORS.warning} />
-            </TouchableOpacity>
-          )}
-
-          {/* Section Title */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Admin Controls</Text>
+              <View style={styles.snapshotDivider} />
+              <View style={styles.snapshotItem}>
+                <View style={[styles.snapshotIcon, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                  <HardHat size={16} color={COLORS.success} />
+                </View>
+                <AnimatedCounter value={stats.activeWorkers} style={styles.snapshotValue} />
+                <Text style={styles.snapshotLabel}>Workers</Text>
+              </View>
+              <View style={styles.snapshotDivider} />
+              <View style={styles.snapshotItem}>
+                <View style={[styles.snapshotIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  <MapPin size={16} color={COLORS.accent} />
+                </View>
+                <AnimatedCounter value={stats.activeSites} style={styles.snapshotValue} />
+                <Text style={styles.snapshotLabel}>Sites</Text>
+              </View>
+            </View>
           </View>
+        </Animated.View>
 
-          {/* Menu Items */}
-          {menuItems.map((item) => (
+        {/* Alert Banner */}
+        {stats.pendingCount > 0 && (
+          <TouchableOpacity
+            style={styles.alertBanner}
+            onPress={() => navigation.navigate('AdminApproval')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.alertIcon}>
+              <AlertTriangle size={20} color="#f59e0b" />
+            </View>
+            <View style={styles.alertContent}>
+              <Text style={styles.alertTitle}>
+                {stats.pendingCount} Pending Approval{stats.pendingCount > 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.alertSubtitle}>Tap to review requests</Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.warning} />
+          </TouchableOpacity>
+        )}
+
+        {/* Section Title */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Admin Controls</Text>
+        </View>
+
+        {/* Menu Items — Staggered Animation */}
+        {menuItems.map((item, index) => (
+          <Animated.View
+            key={item.id}
+            style={{
+              opacity: menuAnims[index].opacity,
+              transform: [{ translateY: menuAnims[index].translateY }],
+            }}
+          >
             <TouchableOpacity
-              key={item.id}
               style={styles.menuCard}
               onPress={item.onPress}
               activeOpacity={0.7}
@@ -279,21 +403,65 @@ const AdminDashboardScreen = ({
               )}
               <ChevronRight size={20} color={COLORS.muted} />
             </TouchableOpacity>
-          ))}
+          </Animated.View>
+        ))}
 
-          {/* Logout Button */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.7}
-          >
-            <LogOut size={20} color={COLORS.error} />
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </TouchableOpacity>
+        {/* Live Activity Feed */}
+        <Animated.View style={{ opacity: feedAnim }}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+          </View>
 
-          
-          
+          <View style={styles.activityCard}>
+            {recentActivity.length === 0 ? (
+              <View style={styles.emptyActivity}>
+                <Activity size={28} color={COLORS.muted} />
+                <Text style={styles.emptyText}>No recent activity</Text>
+              </View>
+            ) : (
+              recentActivity.map((item, index) => {
+                const config = ACTIVITY_CONFIG[item.type] || ACTIVITY_CONFIG.violation;
+                const IconComponent = config.icon;
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.activityRow,
+                      index < recentActivity.length - 1 && styles.activityRowBorder,
+                    ]}
+                  >
+                    <View style={[styles.activityIcon, { backgroundColor: config.bg }]}>
+                      <IconComponent size={16} color={config.color} />
+                    </View>
+                    <View style={styles.activityInfo}>
+                      <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.activitySubtitle}>{item.subtitle}</Text>
+                    </View>
+                    <View style={styles.activityRight}>
+                      <Text style={[styles.activityDetail, {
+                        color: item.type === 'violation' ? COLORS.error :
+                               item.type === 'user_approved' ? COLORS.success : COLORS.warning
+                      }]}>
+                        {item.detail}
+                      </Text>
+                      <Text style={styles.activityTime}>{formatTimeAgo(item.time)}</Text>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
         </Animated.View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <LogOut size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -417,13 +585,71 @@ const styles = {
     padding: 20,
     paddingBottom: 40,
   },
+
+  // Today's Snapshot
+  snapshotContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  snapshotHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 14,
+  },
+  snapshotTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  snapshotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  snapshotItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  snapshotIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  snapshotValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  snapshotLabel: {
+    fontSize: 10,
+    color: COLORS.muted,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  snapshotDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e2e8f0',
+  },
+
+  // Alert Banner
   alertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.2)',
   },
@@ -449,6 +675,8 @@ const styles = {
     fontSize: 13,
     marginTop: 2,
   },
+
+  // Section Header
   sectionHeader: {
     marginBottom: 16,
     alignItems: 'center',
@@ -459,6 +687,8 @@ const styles = {
     color: COLORS.primary,
     textAlign: 'center',
   },
+
+  // Menu Items
   menuCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -505,6 +735,71 @@ const styles = {
     fontSize: 12,
     fontWeight: '700',
   },
+
+  // Activity Feed
+  activityCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  activityRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  activitySubtitle: {
+    fontSize: 11,
+    color: COLORS.muted,
+    marginTop: 1,
+  },
+  activityRight: {
+    alignItems: 'flex-end',
+  },
+  activityDetail: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  activityTime: {
+    fontSize: 10,
+    color: COLORS.muted,
+    marginTop: 2,
+  },
+  emptyActivity: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+
+  // Logout
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,17 +816,6 @@ const styles = {
     color: COLORS.error,
     fontSize: 15,
     fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 32,
-    gap: 8,
-  },
-  footerText: {
-    color: COLORS.muted,
-    fontSize: 13,
   },
 };
 

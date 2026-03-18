@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
 
-
+auth/
+supabase/
 # Expo
 .expo/
 dist/
